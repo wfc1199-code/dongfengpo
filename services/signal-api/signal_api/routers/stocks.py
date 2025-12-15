@@ -1,7 +1,6 @@
-"""Legacy-compatible stock endpoints (read-model / utilities).
-Initial migration target: `/api/stocks/search`.
-This intentionally avoids importing legacy backend modules; it serves from a
-local snapshot file (best-effort) to reduce coupling.
+"""Stock endpoints (read-model / utilities).
+Initial target: `/api/stocks/search`.
+This serves from a local snapshot file (best-effort) to reduce coupling.
 """
 from __future__ import annotations
 import json
