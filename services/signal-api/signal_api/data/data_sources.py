@@ -872,6 +872,104 @@ class StockDataManager:
         
         # 4. 所有数据源失败，返回None (回退到快照或空)
         return None
+    
+    async def get_realtime_quote(self, stock_code: str) -> Optional[Dict[str, Any]]:
+        """
+        获取实时行情数据 (带 fallback)
+        
+        从分时数据中提取最新价格等信息作为实时行情
+        
+        Returns:
+            实时行情字典，包含 current_price, change_percent, volume 等
+        """
+        clean_code = stock_code.replace("sh", "").replace("sz", "").replace("hk", "")
+        
+        # 1. 东方财富 (主数据源) - 从分时数据获取最新价格
+        try:
+            result = await asyncio.wait_for(
+                self.eastmoney.get_minute_data(stock_code),
+                timeout=4.0
+            )
+            if result and result.get("minute_data"):
+                # 从分时数据中提取最新一条作为实时行情
+                minute_data = result["minute_data"]
+                if minute_data:
+                    latest = minute_data[-1]  # 最新一条
+                    return {
+                        "name": result.get("name", ""),
+                        "current_price": float(latest.get("price", 0)),
+                        "change": float(latest.get("price", 0)) - float(result.get("yesterday_close", 0)),
+                        "change_percent": ((float(latest.get("price", 0)) - float(result.get("yesterday_close", 0))) / float(result.get("yesterday_close", 1))) * 100 if result.get("yesterday_close") else 0,
+                        "volume": sum(m.get("volume", 0) for m in minute_data),
+                        "amount": sum(m.get("price", 0) * m.get("volume", 0) for m in minute_data),
+                        "high_price": max(m.get("price", 0) for m in minute_data),
+                        "low_price": min(m.get("price", 0) for m in minute_data),
+                        "open_price": minute_data[0].get("price", 0) if minute_data else 0,
+                        "yesterday_close": result.get("yesterday_close", 0),
+                        "turnover_rate": 0,  # 需要额外计算
+                        "market_value": 0,  # 需要额外计算
+                        "data_source": "eastmoney"
+                    }
+        except asyncio.TimeoutError:
+            logger.warning(f"东方财富实时行情超时: {stock_code}")
+        except Exception as e:
+            logger.warning(f"东方财富实时行情失败: {stock_code} -> {e}")
+        
+        # 2. 腾讯 (备用)
+        try:
+            result = await asyncio.wait_for(
+                self.tencent.get_minute_data(stock_code),
+                timeout=4.0
+            )
+            if result and result.get("minute_data"):
+                minute_data = result["minute_data"]
+                if minute_data:
+                    latest = minute_data[-1]
+                    return {
+                        "name": result.get("name", ""),
+                        "current_price": float(latest.get("price", 0)),
+                        "change": float(latest.get("price", 0)) - float(result.get("yesterday_close", 0)),
+                        "change_percent": ((float(latest.get("price", 0)) - float(result.get("yesterday_close", 0))) / float(result.get("yesterday_close", 1))) * 100 if result.get("yesterday_close") else 0,
+                        "volume": sum(m.get("volume", 0) for m in minute_data),
+                        "amount": sum(m.get("price", 0) * m.get("volume", 0) for m in minute_data),
+                        "high_price": max(m.get("price", 0) for m in minute_data),
+                        "low_price": min(m.get("price", 0) for m in minute_data),
+                        "open_price": minute_data[0].get("price", 0) if minute_data else 0,
+                        "yesterday_close": result.get("yesterday_close", 0),
+                        "turnover_rate": 0,
+                        "market_value": 0,
+                        "data_source": "tencent"
+                    }
+        except Exception as e:
+            logger.warning(f"腾讯实时行情失败: {stock_code} -> {e}")
+        
+        # 3. AkShare (最终备用)
+        try:
+            result = await self.akshare.get_minute_data(stock_code)
+            if result and result.get("minute_data"):
+                minute_data = result["minute_data"]
+                if minute_data:
+                    latest = minute_data[-1]
+                    return {
+                        "name": result.get("name", ""),
+                        "current_price": float(latest.get("price", 0)),
+                        "change": float(latest.get("price", 0)) - float(result.get("yesterday_close", 0)),
+                        "change_percent": ((float(latest.get("price", 0)) - float(result.get("yesterday_close", 0))) / float(result.get("yesterday_close", 1))) * 100 if result.get("yesterday_close") else 0,
+                        "volume": sum(m.get("volume", 0) for m in minute_data),
+                        "amount": sum(m.get("price", 0) * m.get("volume", 0) for m in minute_data),
+                        "high_price": max(m.get("price", 0) for m in minute_data),
+                        "low_price": min(m.get("price", 0) for m in minute_data),
+                        "open_price": minute_data[0].get("price", 0) if minute_data else 0,
+                        "yesterday_close": result.get("yesterday_close", 0),
+                        "turnover_rate": 0,
+                        "market_value": 0,
+                        "data_source": "akshare"
+                    }
+        except Exception as e:
+            logger.warning(f"AkShare实时行情失败: {stock_code} -> {e}")
+        
+        # 4. 所有数据源失败，返回None
+        return None
 
 
 # 全局数据管理器实例

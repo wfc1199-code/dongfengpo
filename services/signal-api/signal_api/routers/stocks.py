@@ -74,7 +74,7 @@ def _format_stock_symbol(stock_code: str) -> str:
     # Shanghai: starts with 6
     if stock_code.startswith("6"):
         return "sh" + stock_code
-    # default Shenzhen (0/2/3/...)
+    # default Shenzhen (0/2/3/...)  # cSpell:ignore Shenzhen
     return "sz" + stock_code
 def _lookup_snapshot_record(symbol: str) -> Dict[str, Any] | None:
     snapshot = _load_snapshot()
@@ -195,37 +195,70 @@ async def _search_online(keyword: str, limit: int = 20) -> List[Dict[str, str]]:
 
 @router.get("/{stock_code}/realtime")
 async def get_realtime(stock_code: str) -> Dict[str, object]:
-    """Realtime endpoint.
-    Shape: { code, data, timestamp }.
-    Tries to use real-time data from pipeline, falls back to snapshot.
+    """获取实时行情数据 - 使用完整数据源链
+    
+    数据源优先级: 东方财富 -> 腾讯 -> AkShare -> 快照
+    返回格式: { code, data: {...}, timestamp, source }
     """
-    from ..data.pipeline_client import get_pipeline_client
+    from ..data.data_sources import get_stock_data_manager
     symbol = _format_stock_symbol(stock_code)
-    # Try to get real-time data from pipeline
+    
+    # 尝试从真实数据源链获取实时行情
     try:
-        client = await get_pipeline_client()
-        if client.is_connected():
-            features = await client.get_latest_features(symbol)
-            if features:
-                # Use real-time data from pipeline
-                return {
+        data_manager = get_stock_data_manager()
+        clean_code = stock_code.replace("sh", "").replace("sz", "").replace("hk", "")
+        realtime = await data_manager.get_realtime_quote(clean_code)
+        
+        if realtime:
+            # 转换为前端期望的格式
+            return {
+                "code": symbol,
+                "data": {
                     "code": symbol,
-                    "data": features,
-                    "timestamp": features.get("timestamp") or datetime.utcnow().isoformat(),
-                    "source": "pipeline",
-                }
+                    "name": realtime.get("name", ""),
+                    "current_price": realtime.get("current_price", 0),
+                    "change": realtime.get("change", 0),
+                    "change_percent": realtime.get("change_percent", 0),
+                    "volume": realtime.get("volume", 0),
+                    "amount": realtime.get("amount", 0),
+                    "high_price": realtime.get("high_price", 0),
+                    "low_price": realtime.get("low_price", 0),
+                    "open_price": realtime.get("open_price", 0),
+                    "yesterday_close": realtime.get("yesterday_close", 0),
+                    "turnover_rate": realtime.get("turnover_rate", 0),
+                    "market_value": realtime.get("market_value", 0),
+                },
+                "timestamp": datetime.utcnow().isoformat(),
+                "source": realtime.get("data_source", "api"),
+            }
     except Exception as e:
-        # Log but don't fail - fall back to snapshot
-        import logging
-        logging.getLogger(__name__).debug(f"Pipeline data unavailable: {e}")
+        # 日志记录失败，继续使用快照回退
+        logger.error(f"真实数据源获取实时行情失败: {stock_code} -> {e}", exc_info=True)
+    
     # Fallback to snapshot data
     rec = _lookup_snapshot_record(symbol)
     if not rec:
         raise HTTPException(status_code=404, detail=f"Stock not found: {stock_code}")
+    
+    # 从快照数据构建实时行情格式
     return {
         "code": symbol,
-        "data": rec,
-        "timestamp": rec.get("update_time"),
+        "data": {
+            "code": symbol,
+            "name": rec.get("name", ""),
+            "current_price": float(rec.get("current_price") or rec.get("price") or 0.0),
+            "change": float(rec.get("change") or 0.0),
+            "change_percent": float(rec.get("change_percent") or 0.0),
+            "volume": float(rec.get("volume") or 0.0),
+            "amount": float(rec.get("amount") or 0.0),
+            "high_price": float(rec.get("high_price") or 0.0),
+            "low_price": float(rec.get("low_price") or 0.0),
+            "open_price": float(rec.get("open_price") or 0.0),
+            "yesterday_close": rec.get("yesterday_close", 0),
+            "turnover_rate": float(rec.get("turnover_rate") or 0.0),
+            "market_value": rec.get("market_value", 0),
+        },
+        "timestamp": rec.get("update_time") or datetime.utcnow().isoformat(),
         "source": "snapshot",
     }
 def _iter_trading_minutes() -> List[str]:
@@ -317,12 +350,12 @@ async def get_kline(
         data_manager = get_stock_data_manager()
         result = await data_manager.get_kline_data(stock_code, period, limit)
         
-        if result and result.get("klines"):
+        if result and result.get("klines"):  # cSpell:ignore klines
             return {
                 "code": stock_code,
                 "name": result.get("name", ""),
                 "period": period,
-                "klines": result["klines"],
+                "klines": result["klines"],  # cSpell:ignore klines
                 "timestamp": datetime.utcnow().isoformat(),
                 "yesterday_close": result.get("yesterday_close"),
                 "source": result.get("data_source", "api"),
@@ -347,10 +380,10 @@ async def get_kline(
     except Exception:
         base_dt = datetime.utcnow()
     count = min(limit, 200)
-    klines: List[Dict[str, object]] = []
+    klines: List[Dict[str, object]] = []  # cSpell:ignore klines
     for i in range(count):
         d = (base_dt - timedelta(days=i)).date().isoformat()
-        klines.append(
+        klines.append(  # cSpell:ignore klines
             {
                 "date": d,
                 "open": open_p,
@@ -364,7 +397,7 @@ async def get_kline(
         "code": stock_code,
         "name": rec.get("name", ""),
         "period": period,
-        "klines": list(reversed(klines)),
+        "klines": list(reversed(klines)),  # cSpell:ignore klines
         "timestamp": datetime.utcnow().isoformat(),
         "yesterday_close": rec.get("yesterday_close"),
         "source": "snapshot",
@@ -376,12 +409,22 @@ async def get_stock_transactions(
     start_time: str = Query(..., description="开始时间 HH:MM:SS"),
     end_time: str = Query(..., description="结束时间 HH:MM:SS"),
 ) -> Dict[str, Any]:
-    """Get transaction details for a stock (alias for /api/transactions/{stockCode}/details).
+    """Get transaction details for a stock.
     
-    This endpoint is an alias that redirects to the transactions router for consistency.
+    Returns transaction details for the specified time range.
+    Currently returns a placeholder response as transaction data source is not yet implemented.
     """
-    from ..routers.transactions import get_transaction_details
-    return await get_transaction_details(stock_code, start_time, end_time)
+    # TODO: Implement transaction details fetching from data sources
+    # For now, return a placeholder response to maintain API compatibility
+    return {
+        "code": stock_code,
+        "start_time": start_time,
+        "end_time": end_time,
+        "transactions": [],
+        "total_count": 0,
+        "message": "Transaction details endpoint is not yet fully implemented",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
 @router.get("/{stock_code}/behavior/analysis")
 async def behavior_analysis(stock_code: str) -> Dict[str, object]:
     """Minimal behavior analysis for UI usage."""
