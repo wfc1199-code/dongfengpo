@@ -467,7 +467,6 @@ async def scan_market_anomaly(
     """
     市场异动扫描 - 兼容前端MarketAnomalyScanner组件
     
-    从Legacy版本迁移 (backend/main_modular.py:292)
     适配BMAD架构，使用Signal API的数据源
     """
     try:

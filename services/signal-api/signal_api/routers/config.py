@@ -19,7 +19,7 @@ router = APIRouter(
 
 logger = logging.getLogger(__name__)
 
-# 配置文件路径 (使用与legacy相同的配置文件)
+# 配置文件路径
 def _get_config_path() -> Path:
     # 先尝试相对于项目根目录
     paths = [
@@ -249,7 +249,6 @@ async def get_monitoring_stocks():
     """
     获取当前监控的股票列表 - 兼容前端ManagementDashboard组件
     
-    从Legacy版本迁移 (backups/cleanup_20251002_102711/main_old.py:262)
     适配BMAD架构，从配置和实时数据源获取
     """
     try:

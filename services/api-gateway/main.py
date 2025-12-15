@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 东风破 - API网关服务
-统一管理Legacy和新微服务的路由、认证、限流
+统一管理微服务的路由、认证、限流
 """
 from fastapi import FastAPI, Request, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -51,7 +51,7 @@ def _env(name: str, default: str) -> str:
 # 创建FastAPI应用
 app = FastAPI(
     title="东风破 API Gateway",
-    description="统一API网关 - 路由Legacy和微服务",
+    description="统一API网关 - 路由微服务",
     version="2.0.0"
 )
 # CORS配置
@@ -95,7 +95,6 @@ SERVICES = {
             "/api/stocks/*/timeshare",
             "/api/stocks/*/behavior/analysis",
             "/api/anomaly/detect",
-            "/api/anomaly/detect-legacy",
             "/api/anomaly/state/*",
             "/api/anomaly/peak-breakout/scan",
             "/api/anomaly/consolidation-breakout/scan",
@@ -632,7 +631,6 @@ async def get_system_status():
     """
     获取系统状态 - 兼容前端ManagementDashboard组件
     
-    从Legacy版本迁移 (backups/cleanup_20251002_102711/main_old.py:248)
     适配BMAD架构，返回各微服务健康状态
     """
     try:
