@@ -1,6 +1,5 @@
 """
 异动检测策略
-从Legacy backend/core/anomaly_detection.py迁移
 """
 
 from __future__ import annotations

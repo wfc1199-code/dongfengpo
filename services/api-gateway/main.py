@@ -343,10 +343,10 @@ def get_signal_streamer_opportunities_ws_url() -> str:
     return f"{scheme}://{host}/ws/opportunities"
 
 @app.websocket("/ws")
-async def ws_legacy(websocket: WebSocket) -> None:
+async def ws_opportunities_alias(websocket: WebSocket) -> None:
     """
-    Legacy WebSocket endpoint alias.
-    Redirects to signal-streamer opportunities stream for compatibility.
+    WebSocket endpoint alias.
+    Redirects to signal-streamer opportunities stream.
     """
     await ws_opportunities(websocket)
 

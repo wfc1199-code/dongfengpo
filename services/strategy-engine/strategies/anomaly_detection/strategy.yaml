@@ -1,5 +1,4 @@
 # 异动检测策略配置
-# 从Legacy anomaly_detection.py迁移
 
 name: anomaly_detection
 version: 2.0.0

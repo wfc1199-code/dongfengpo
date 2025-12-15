@@ -96,7 +96,7 @@ async def search_stocks(
     1. First try local snapshot (fast)
     2. If no results or less than 3, fallback to online EastMoney API
     
-    Response keeps legacy shape: `{ "stocks": [...] }`.
+    Response shape: `{ "stocks": [...] }`.
     """
     q = keyword.strip()
     if not q:
@@ -196,8 +196,8 @@ async def _search_online(keyword: str, limit: int = 20) -> List[Dict[str, str]]:
 
 @router.get("/{stock_code}/realtime")
 async def get_realtime(stock_code: str) -> Dict[str, object]:
-    """Legacy-compatible realtime endpoint.
-    Shape matches legacy: { code, data, timestamp }.
+    """Realtime endpoint.
+    Shape: { code, data, timestamp }.
     Tries to use real-time data from pipeline, falls back to snapshot.
     """
     from ..data.pipeline_client import get_pipeline_client
@@ -385,11 +385,11 @@ async def get_stock_transactions(
     return await get_transaction_details(stock_code, start_time, end_time)
 @router.get("/{stock_code}/behavior/analysis")
 async def behavior_analysis(stock_code: str) -> Dict[str, object]:
-    """Minimal behavior analysis compatible with legacy UI usage."""
+    """Minimal behavior analysis for UI usage."""
     symbol = _format_stock_symbol(stock_code)
     rec = _lookup_snapshot_record(symbol)
     if not rec:
-        # Keep legacy semantics: unknown but 200 to keep UI resilient
+        # Return 200 to keep UI resilient
         return {
             "behavior": "unknown",
             "confidence": 0,

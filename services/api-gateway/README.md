@@ -2,7 +2,7 @@
 
 ## 功能
 
-- **统一路由**: 管理Legacy和微服务的路由
+- **统一路由**: 管理微服务的路由
 - **负载均衡**: 支持多实例负载均衡（待实现）
 - **监控**: Prometheus指标导出
 - **健康检查**: 监控后端服务状态
@@ -22,8 +22,8 @@ python main.py
 
 | 路径前缀 | 目标服务 | 端口 |
 |---------|---------|------|
-| `/api/stocks/*` | legacy | 9000 |
-| `/api/anomaly/*` | legacy | 9000 |
+| `/api/stocks/*` | signal-api | 9001 |
+| `/api/anomaly/*` | signal-api | 9001 |
 | `/api/v2/signals/*` | signal-api | 8001 |
 | `/api/v2/strategies/*` | strategy-engine | 8003 |
 | `/api/v2/backtest/*` | backtest-service | 8004 |
