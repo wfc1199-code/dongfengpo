@@ -1,0 +1,129 @@
+可用任务列表
+核心模块 (Core)
+advanced-elicitation - Advanced Elicitation
+描述：从工作流调用时使用
+路径：.bmad/core/tasks/advanced-elicitation.xml
+独立运行：是
+index-docs - Index Docs
+描述：生成或更新指定目录中所有文档的 index.md
+路径：.bmad/core/tasks/index-docs.xml
+独立运行：是
+validate-workflow - Validate Workflow Output
+描述：对文档运行检查清单，进行详细分析并生成验证报告
+路径：.bmad/core/tasks/validate-workflow.xml
+独立运行：否
+workflow - Execute Workflow
+描述：通过加载配置、遵循指令并生成输出来执行给定工作流
+路径：.bmad/core/tasks/workflow.xml
+独立运行：否
+BMM 模块
+daily-standup - Daily Standup
+描述：每日站会
+路径：.bmad/bmm/tasks/daily-standup.xml
+独立运行：否
+要执行某个任务，请告诉我任务名称或编号。也可以：
+输入 3 查看工作流列表
+输入 *menu 或 M 返回主菜单
+3
+
+正在列出所有可用工作流...
+可用工作流列表
+核心模块 (Core)
+brainstorming-session - 头脑风暴会议
+使用多种创意技术和构思方法进行互动式头脑风暴
+party-mode - 群聊模式
+协调所有已安装 BMAD 代理之间的群组讨论，支持多代理自然对话
+BMB 模块（BMAD Builder）
+create-agent - 创建代理
+交互式工作流，构建符合 BMAD Core 规范的代理，包含可选头脑风暴、角色开发和命令结构
+create-module - 创建模块
+交互式工作流，构建完整的 BMAD 模块，包含代理、工作流和安装基础设施
+create-workflow - 创建工作流
+使用基于 Markdown 的步骤架构创建结构化独立工作流
+edit-agent - 编辑代理
+编辑现有 BMAD 代理，遵循最佳实践和约定
+edit-workflow - 编辑工作流
+智能工作流编辑器，帮助修改现有工作流，遵循最佳实践
+workflow-compliance-check - 工作流合规性检查
+系统化验证工作流是否符合 BMAD 标准，包含对抗性分析和详细报告
+BMM 模块（BMAD Method）
+分析阶段 (1-Analysis)
+create-product-brief - 创建产品简报
+作为业务分析师与用户协作，通过逐步发现创建全面的产品简报
+research - 研究
+使用当前网络数据和已验证来源进行跨领域研究（市场、技术、领域等）
+规划阶段 (2-Plan)
+create-ux-design - 创建 UX 设计
+与 UX 设计专家协作，规划应用的 UX 模式、外观和感觉
+create-prd - 创建 PRD
+两个产品经理协作，通过逐步发现创建全面的 PRD
+解决方案阶段 (3-Solution)
+create-architecture - 创建架构
+协作式架构决策，用于 AI 代理一致性。用智能、自适应对话替代模板驱动架构
+create-epics-stories - 创建史诗和故事
+将 PRD 需求和架构决策转换为按用户价值组织的全面故事
+check-implementation-readiness - 检查实施就绪性
+关键验证工作流，评估 PRD、架构和史诗故事的完整性和一致性
+实施阶段 (4-Implementation)
+code-review - 代码审查
+执行对抗性高级开发者代码审查，发现每个故事中的 3-10 个具体问题
+correct-course - 纠正方向
+在 Sprint 执行期间处理重大变更，分析影响、提出解决方案并路由实施
+create-story - 创建故事
+从史诗+故事创建下一个用户故事，包含增强的上下文分析和直接标记为开发就绪
+dev-story - 开发故事
+通过实施任务/子任务、编写测试、验证并更新故事文件来执行故事
+retrospective - 回顾
+史诗完成后运行，回顾整体成功，提取经验教训
+sprint-planning - Sprint 规划
+生成和管理 Sprint 状态跟踪文件，从史诗文件中提取所有史诗和故事
+sprint-status - Sprint 状态
+总结 sprint-status.yaml，识别风险，并路由到正确的实施工作流
+快速流程 (Quick Flow)
+create-tech-spec - 创建技术规范
+对话式规范工程 - 提问、调查代码、生成实施就绪的技术规范
+quick-dev - 快速开发
+灵活开发 - 执行技术规范或直接指令，可选规划
+图表 (Diagrams)
+create-excalidraw-dataflow - 创建数据流图
+以 Excalidraw 格式创建数据流图 (DFD)
+create-excalidraw-diagram - 创建系统架构图
+以 Excalidraw 格式创建系统架构图、ERD、UML 图或一般技术图
+create-excalidraw-flowchart - 创建流程图
+以 Excalidraw 格式创建流程图，用于流程、管道或逻辑流
+create-excalidraw-wireframe - 创建线框图
+以 Excalidraw 格式创建网站或应用线框图
+文档 (Documentation)
+document-project - 文档化项目
+分析并文档化遗留项目，扫描代码库、架构和模式，创建全面的参考文档
+generate-project-context - 生成项目上下文
+创建简洁的 project_context.md 文件，包含 AI 代理在实施代码时必须遵循的关键规则和模式
+测试架构 (Test Architecture)
+testarch-atdd - ATDD
+在实施前使用 TDD 红绿重构循环生成失败的验收测试
+testarch-automate - 测试自动化
+在实施后扩展测试自动化覆盖，或分析现有代码库生成全面的测试套件
+testarch-ci - CI/CD
+搭建 CI/CD 质量管道，包含测试执行、burn-in 循环和工件收集
+testarch-framework - 测试框架
+初始化生产就绪的测试框架架构（Playwright 或 Cypress），包含 fixtures、helpers 和配置
+testarch-nfr - 非功能性需求评估
+在发布前评估非功能性需求（性能、安全性、可靠性、可维护性），基于证据进行验证
+testarch-test-design - 测试设计
+双模式工作流：(1) 解决方案阶段的系统级可测试性审查，或 (2) 实施阶段的史诗级测试规划
+testarch-test-review - 测试审查
+使用全面的知识库和最佳实践验证来审查测试质量
+testarch-trace - 测试追溯
+生成需求到测试的可追溯性矩阵，分析覆盖率，做出质量门决策
+工作流状态 (Workflow Status)
+workflow-init - 初始化工作流
+通过确定级别、类型和创建工作流路径来初始化新的 BMM 项目
+workflow-status - 工作流状态
+轻量级状态检查器 - 回答"我现在应该做什么？"读取 YAML 状态文件进行工作流跟踪
+要执行某个工作流，请告诉我工作流名称或编号。也可以：
+输入 *menu 或 M 返回主菜单
+输入 2 查看任务列表
+根据您的项目情况，建议考虑：
+document-project - 为您的微服务架构项目生成文档
+create-architecture - 优化或记录您的系统架构
+code-review - 审查 Signal API 或其他服务的代码质量

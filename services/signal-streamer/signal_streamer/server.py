@@ -90,6 +90,11 @@ class OpportunityStreamer:
 def create_app(streamer: OpportunityStreamer) -> FastAPI:
     app = FastAPI(title="Opportunity Signal Stream", version="1.0.0")
 
+    @app.get("/health")
+    async def health() -> Dict[str, str]:
+        # Basic liveness; for deeper checks, add Redis ping or channel state as needed.
+        return {"status": "ok"}
+
     @app.websocket("/ws/opportunities")
     async def websocket_endpoint(websocket: WebSocket) -> None:
         await streamer.register(websocket)

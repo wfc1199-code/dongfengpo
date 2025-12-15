@@ -62,6 +62,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Simple health endpoint
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 # Prometheus监控（使用条件注册避免重复）
 try:
     REQUEST_COUNT = Counter('gateway_requests_total', 'Total requests', ['method', 'endpoint', 'status'])

@@ -1,0 +1,195 @@
+{
+  "workflow_version": "1.2.0",
+  "timestamps": {
+    "started": "2025-12-15T07:54:29Z",
+    "last_updated": "2025-12-15T07:54:29Z"
+  },
+  "mode": "initial_scan",
+  "scan_level": "exhaustive",
+  "project_root": "/Users/wangfangchun/东风破",
+  "output_folder": "/Users/wangfangchun/东风破/docs",
+  "completed_steps": [
+    {
+      "step": "step_1",
+      "status": "completed",
+      "timestamp": "2025-12-15T07:54:29Z",
+      "summary": "Classified as multi-part with 3 parts: frontend(web), services(backend microservices), libs(shared libs)"
+    },
+    {
+      "step": "step_2",
+      "status": "completed",
+      "timestamp": "2025-12-15T08:00:00Z",
+      "summary": "Found existing docs (~189 md files incl. root/services/frontend/docs); user provided no additional context"
+    },
+    {
+      "step": "step_3",
+      "status": "completed",
+      "timestamp": "2025-12-15T08:10:00Z",
+      "summary": "Tech stack identified: frontend React/Vite/AntD/zustand/echarts; backend multiple Python microservices with requirements; shared libs strategy-sdk/data_contracts"
+    },
+    {
+      "step": "step_4_partial",
+      "status": "completed",
+      "timestamp": "2025-12-15T08:20:00Z",
+      "summary": "Generated initial docs: api-contracts-signal-api, architecture, source-tree-analysis, project-overview; index updated"
+    },
+    {
+      "step": "step_4_partial_2",
+      "status": "completed",
+      "timestamp": "2025-12-15T08:30:00Z",
+      "summary": "Added data-models, component-inventory, development-guide, integration-architecture; index updated"
+    },
+    {
+      "step": "step_4_partial_3",
+      "status": "completed",
+      "timestamp": "2025-12-15T08:40:00Z",
+      "summary": "Strategy-engine deep-dive doc added; integration architecture updated with Redis pubsub/stream"
+    },
+    {
+      "step": "step_4_partial_4",
+      "status": "completed",
+      "timestamp": "2025-12-15T08:50:00Z",
+      "summary": "Added signal-streamer and api-gateway architecture docs; updated component inventory and integration architecture; frontend dirs inventoried"
+    },
+    {
+      "step": "step_4_partial_5",
+      "status": "completed",
+      "timestamp": "2025-12-15T09:00:00Z",
+      "summary": "Added opportunity-aggregator architecture doc"
+    },
+    {
+      "step": "step_4_partial_6",
+      "status": "completed",
+      "timestamp": "2025-12-15T09:10:00Z",
+      "summary": "Added stream-buffer, collector-gateway, frontend inventory, WS hook example; index updated"
+    },
+    {
+      "step": "step_4_partial_7",
+      "status": "completed",
+      "timestamp": "2025-12-15T09:20:00Z",
+      "summary": "Frontend data flow mapping added (MarketScanner, services); pages/components noted"
+    },
+    {
+      "step": "step_4_partial_8",
+      "status": "completed",
+      "timestamp": "2025-12-15T09:30:00Z",
+      "summary": "Frontend component data flows added (MarketAnomalyPanel/Scanner, SmartOpportunityFeed, RealtimeLimitUpPredictor, PriceAlertOverlay, RealtimeMonitor); index updated"
+    },
+    {
+      "step": "step_4_partial_9",
+      "status": "completed",
+      "timestamp": "2025-12-15T09:40:00Z",
+      "summary": "Code-level docs added for stream-buffer and collector-gateway; index updated"
+    },
+    {
+      "step": "step_4_partial_10",
+      "status": "completed",
+      "timestamp": "2025-12-15T09:50:00Z",
+      "summary": "Upgraded useWebSocket heartbeat/backoff; unified frontend API base URLs; added service health notes"
+    },
+    {
+      "step": "step_4_partial_11",
+      "status": "completed",
+      "timestamp": "2025-12-15T10:00:00Z",
+      "summary": "RealtimeMonitor switched to signal-streamer URL; documented realtime data flow caveats"
+    },
+    {
+      "step": "step_4_partial_12",
+      "status": "completed",
+      "timestamp": "2025-12-15T10:05:00Z",
+      "summary": "Signal-streamer adds /health; service-health doc updated"
+    },
+    {
+      "step": "step_4_partial_13",
+      "status": "completed",
+      "timestamp": "2025-12-15T10:10:00Z",
+      "summary": "API Gateway adds /health; service-health doc updated"
+    }
+  ],
+  "current_step": "step_5",
+  "findings": {
+    "project_classification": "multi-part repository with frontend (React/TS), backend services (Python microservices), shared libs (strategy-sdk, data_contracts)",
+    "project_parts": [
+      {
+        "part_id": "frontend",
+        "root_path": "/Users/wangfangchun/东风破/frontend",
+        "project_type_id": "web",
+        "display_name": "React/TypeScript frontend"
+      },
+      {
+        "part_id": "services",
+        "root_path": "/Users/wangfangchun/东风破/services",
+        "project_type_id": "backend",
+        "display_name": "Python microservices"
+      },
+      {
+        "part_id": "libs",
+        "root_path": "/Users/wangfangchun/东风破/libs",
+        "project_type_id": "backend",
+        "display_name": "Shared libraries (strategy-sdk, data_contracts)"
+      }
+    ],
+    "tech_stack_summary": {
+      "frontend": {
+        "package_json": {
+          "name": "frontend",
+          "scripts": ["start","build","serve","test","eject"],
+          "framework": "React 19 + Vite",
+          "ui": "Ant Design 5",
+          "state": "zustand",
+          "charts": "echarts"
+        }
+      },
+      "services": {
+        "service_roots": [
+          "api-gateway",
+          "backtest-service",
+          "collector-gateway",
+          "data-cleaner",
+          "data-lake-writer",
+          "feature-pipeline",
+          "opportunity-aggregator",
+          "risk-guard",
+          "signal-api",
+          "signal-streamer",
+          "strategy-engine",
+          "stream-buffer",
+          "unified-gateway"
+        ],
+        "requirements_files": "requirements.txt + requirements-dev.txt present per service"
+      },
+      "libs": {
+        "components": ["strategy-sdk", "data_contracts"],
+        "note": "Shared Python libs and JSON contracts"
+      }
+    }
+  },
+  "outputs_generated": [
+    "project-scan-report.json",
+    "api-contracts-signal-api.md",
+    "index.md",
+    "architecture.md",
+    "source-tree-analysis.md",
+    "project-overview.md",
+    "data-models.md",
+    "component-inventory.md",
+    "development-guide.md",
+    "integration-architecture.md",
+    "architecture-strategy-engine.md",
+    "architecture-signal-streamer.md",
+    "architecture-api-gateway.md",
+    "architecture-opportunity-aggregator.md",
+    "architecture-stream-buffer.md",
+    "architecture-collector-gateway.md",
+    "architecture-collector-gateway-code.md",
+    "frontend-inventory.md",
+    "frontend-ws-hook-example.md",
+    "frontend-data-flow.md",
+    "frontend-data-flow-opportunity.md",
+    "frontend-data-flow-realtime.md",
+    "frontend-data-flow-components.md",
+    "service-health.md"
+  ],
+  "resume_instructions": "Starting from step 1"
+}
+
