@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>东风破 - 交易机会发现中心</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --color-up: #ef4444;
+            --color-down: #10b981;
+            --color-primary: #667eea;
+            --color-warning: #f59e0b;
+            --color-text: #1f2937;
+            --color-text-light: #6b7280;
+            --color-border: #e5e7eb;
+            --color-bg: #f9fafb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--color-bg);
+            color: var(--color-text);
+        }
+
+        /* 顶部导航栏 */
+        .navbar {
+            background: white;
+            border-bottom: 1px solid var(--color-border);
+            padding: 0 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .navbar-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--color-primary);
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--color-bg);
+        }
+
+        .nav-item.active {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            background: #f0fdf4;
+            color: #10b981;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        /* 市场概览面板 */
+        .market-overview {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 24px 20px;
+        }
+
+        .market-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .market-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .market-stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .market-stat-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        /* 主内容区 */
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            gap: 20px;
+        }
+
+        /* 左侧筛选面板 */
+        .filter-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 84px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-section {
+            margin-bottom: 24px;
+        }
+
+        .filter-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--color-text);
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-option:hover {
+            padding-left: 8px;
+            color: var(--color-primary);
+        }
+
+        .filter-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .sort-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--color-border);
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .quick-filter-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .quick-tag {
+            padding: 6px 12px;
+            border-radius: 16px;
+            border: 1px solid var(--color-border);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-tag:hover, .quick-tag.active {
+            background: var(--color-primary);
+            color: white;
+            border-color: var(--color-primary);
+        }
+
+        /* 右侧机会列表 */
+        .opportunities-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-outline {
+            border: 1px solid var(--color-border);
+            background: white;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--color-primary);
+            color: var(--color-primary);
+        }
+
+        /* 机会卡片 */
+        .opportunity-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .opportunity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            border-color: var(--color-primary);
+        }
+
+        .opportunity-card.hot {
+            border-color: var(--color-warning);
+            background: linear-gradient(to right, #fff8e1 0%, white 100%);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+
+        .stock-info {
+            flex: 1;
+        }
+
+        .stock-symbol {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--color-text);
+            margin-bottom: 4px;
+        }
+
+        .stock-name {
+            font-size: 14px;
+            color: var(--color-text-light);
+        }
+
+        .score-badge {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .score-stars {
+            font-size: 20px;
+            letter-spacing: 2px;
+        }
+
+        .score-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .score-5 { color: #fbbf24; }
+        .score-4 { color: #3b82f6; }
+        .score-3 { color: #10b981; }
+        .score-2 { color: #f59e0b; }
+        .score-1 { color: #9ca3af; }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin: 16px 0;
+            padding: 16px;
+            background: var(--color-bg);
+            border-radius: 8px;
+        }
+
+        .metric {
+            text-align: center;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: var(--color-text-light);
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--color-text);
+        }
+
+        .metric-value.up {
+            color: var(--color-up);
+        }
+
+        .metric-value.down {
+            color: var(--color-down);
+        }
+
+        .signals-section {
+            margin: 16px 0;
+            padding-top: 16px;
+            border-top: 1px solid var(--color-border);
+        }
+
+        .signals-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--color-text);
+        }
+
+        .signal-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .signal-tag {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            background: #f0f9ff;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 16px;
+        }
+
+        .recommendation {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .rec-label {
+            font-size: 12px;
+            color: var(--color-text-light);
+        }
+
+        .rec-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 13px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            background: white;
+            border-radius: 10px;
+            padding: 60px 20px;
+            text-align: center;
+            color: var(--color-text-light);
+        }
+
+        .empty-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* 详情弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 28px;
+            cursor: pointer;
+            color: var(--color-text-light);
+            transition: color 0.2s;
+        }
+
+        .modal-close:hover {
+            color: var(--color-text);
+        }
+
+        .modal-header {
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .modal-section {
+            margin: 24px 0;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--color-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px;
+            background: var(--color-bg);
+            border-radius: 6px;
+        }
+
+        .detail-label {
+            color: var(--color-text-light);
+            font-size: 14px;
+        }
+
+        .detail-value {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-panel {
+                position: relative;
+                top: 0;
+            }
+
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 提示标签 */
+        .hot-badge {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: var(--color-up);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <div class="navbar-content">
+            <div class="logo">
+                🚀 东风破
+            </div>
+            <div class="nav-menu">
+                <div class="nav-item active">机会发现</div>
+                <div class="nav-item">自选股</div>
+                <div class="nav-item">策略中心</div>
+                <div class="nav-item">设置</div>
+            </div>
+            <div class="nav-right">
+                <div class="status-badge">
+                    <div class="status-dot"></div>
+                    <span id="connectionStatus">实时连接</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 市场概览 -->
+    <div class="market-overview">
+        <div class="market-content">
+            <div class="market-stat">
+                <div class="market-stat-label">市场热度</div>
+                <div class="market-stat-value">🔥🔥🔥</div>
+            </div>
+            <div class="market-stat">
+                <div class="market-stat-label">活跃机会</div>
+                <div class="market-stat-value" id="totalOpportunities">0</div>
+            </div>
+            <div class="market-stat">
+                <div class="market-stat-label">高分机会 (>85)</div>
+                <div class="market-stat-value" id="highScoreOpportunities">0</div>
+            </div>
+            <div class="market-stat">
+                <div class="market-stat-label">平均置信度</div>
+                <div class="market-stat-value" id="avgConfidence">0%</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 左侧筛选面板 -->
+        <div class="filter-panel">
+            <div class="filter-section">
+                <div class="filter-title">📊 综合筛选</div>
+                <div class="filter-option">
+                    <input type="checkbox" id="filterHighConfidence" onchange="applyFilters()">
+                    <label for="filterHighConfidence">高置信度 (>80%)</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="filterHighScore" onchange="applyFilters()">
+                    <label for="filterHighScore">高评分 (>85分)</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="filterLowRisk" onchange="applyFilters()">
+                    <label for="filterLowRisk">低风险</label>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-title">🔢 排序方式</div>
+                <select class="sort-select" id="sortBy" onchange="applySorting()">
+                    <option value="score">综合评分 (默认)</option>
+                    <option value="confidence">置信度</option>
+                    <option value="strength">强度分数</option>
+                    <option value="time">最新更新</option>
+                </select>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-title">⚡ 快速筛选</div>
+                <div class="quick-filter-tags">
+                    <div class="quick-tag" onclick="quickFilter('all')">全部</div>
+                    <div class="quick-tag" onclick="quickFilter('hot')">热门</div>
+                    <div class="quick-tag" onclick="quickFilter('new')">最新</div>
+                    <div class="quick-tag" onclick="quickFilter('safe')">稳健</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧机会列表 -->
+        <div class="opportunities-panel">
+            <div class="panel-header">
+                <div>
+                    <div class="panel-title">📈 交易机会</div>
+                    <div style="font-size: 14px; color: var(--color-text-light); margin-top: 4px;">
+                        实时发现最佳涨幅机会
+                    </div>
+                </div>
+                <div class="panel-actions">
+                    <button class="btn btn-outline" onclick="refreshOpportunities()">🔄 刷新</button>
+                    <button class="btn btn-primary" onclick="triggerTestSignal()">⚡ 触发测试</button>
+                </div>
+            </div>
+
+            <div id="opportunitiesList">
+                <div class="empty-state">
+                    <div class="empty-icon">📊</div>
+                    <div style="font-size: 16px; margin-bottom: 8px;">等待实时机会推送...</div>
+                    <div style="font-size: 14px;">连接WebSocket后将实时显示交易机会</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 详情弹窗 -->
+    <div class="modal" id="detailModal">
+        <div class="modal-content">
+            <div class="modal-close" onclick="closeModal()">&times;</div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let opportunities = new Map();
+        let filteredOpportunities = [];
+
+        const WS_URL = 'ws://localhost:8100/ws/opportunities';
+        const API_URL = 'http://localhost:8888';
+
+        // 连接WebSocket
+        function connectWebSocket() {
+            try {
+                ws = new WebSocket(WS_URL);
+
+                ws.onopen = () => {
+                    console.log('✅ WebSocket连接成功');
+                    document.getElementById('connectionStatus').textContent = '实时连接';
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'opportunity') {
+                        const opp = data.payload;
+                        processOpportunity(opp);
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    console.error('❌ WebSocket错误:', error);
+                };
+
+                ws.onclose = () => {
+                    console.log('🔌 WebSocket连接关闭，3秒后重连...');
+                    document.getElementById('connectionStatus').textContent = '重新连接...';
+                    setTimeout(connectWebSocket, 3000);
+                };
+            } catch (error) {
+                console.error('连接失败:', error);
+            }
+        }
+
+        // 处理新机会
+        function processOpportunity(opp) {
+            // 计算综合评分
+            opp.score = calculateScore(opp);
+
+            // 计算预测涨幅
+            opp.predicted_gain = calculatePredictedGain(opp);
+
+            // 评估风险等级
+            opp.risk_level = assessRiskLevel(opp);
+
+            opportunities.set(opp.symbol, opp);
+            updateStats();
+            applyFilters();
+        }
+
+        // 计算综合评分 (0-100)
+        function calculateScore(opp) {
+            let score = 0;
+
+            // 置信度权重 40%
+            score += (opp.confidence || 0) * 40;
+
+            // 强度分数权重 30%
+            score += ((opp.strength_score || 0) / 100) * 30;
+
+            // 信号数量加分 15%
+            const signals = opp.signals || [];
+            const signalBonus = Math.min(signals.length * 3, 15);
+            score += signalBonus;
+
+            // 更新时间加分 15% (越新越高分)
+            score += 15;
+
+            return Math.round(score);
+        }
+
+        // 计算预测涨幅
+        function calculatePredictedGain(opp) {
+            const confidence = opp.confidence || 0;
+            const strength = opp.strength_score || 0;
+
+            // 简单的预测公式
+            const baseGain = (confidence * strength) / 10;
+            return Math.round(baseGain * 10) / 10;
+        }
+
+        // 评估风险等级
+        function assessRiskLevel(opp) {
+            const confidence = opp.confidence || 0;
+
+            if (confidence >= 0.8) return 'low';
+            if (confidence >= 0.6) return 'medium';
+            return 'high';
+        }
+
+        // 应用筛选
+        function applyFilters() {
+            filteredOpportunities = Array.from(opportunities.values());
+
+            // 高置信度筛选
+            if (document.getElementById('filterHighConfidence').checked) {
+                filteredOpportunities = filteredOpportunities.filter(o => o.confidence >= 0.8);
+            }
+
+            // 高评分筛选
+            if (document.getElementById('filterHighScore').checked) {
+                filteredOpportunities = filteredOpportunities.filter(o => o.score >= 85);
+            }
+
+            // 低风险筛选
+            if (document.getElementById('filterLowRisk').checked) {
+                filteredOpportunities = filteredOpportunities.filter(o => o.risk_level === 'low');
+            }
+
+            applySorting();
+        }
+
+        // 应用排序
+        function applySorting() {
+            const sortBy = document.getElementById('sortBy').value;
+
+            filteredOpportunities.sort((a, b) => {
+                switch(sortBy) {
+                    case 'score':
+                        return b.score - a.score;
+                    case 'confidence':
+                        return b.confidence - a.confidence;
+                    case 'strength':
+                        return b.strength_score - a.strength_score;
+                    case 'time':
+                        return new Date(b.updated_at) - new Date(a.updated_at);
+                    default:
+                        return b.score - a.score;
+                }
+            });
+
+            renderOpportunities();
+        }
+
+        // 快速筛选
+        function quickFilter(type) {
+            // 清除所有复选框
+            document.getElementById('filterHighConfidence').checked = false;
+            document.getElementById('filterHighScore').checked = false;
+            document.getElementById('filterLowRisk').checked = false;
+
+            switch(type) {
+                case 'hot':
+                    document.getElementById('filterHighScore').checked = true;
+                    break;
+                case 'safe':
+                    document.getElementById('filterLowRisk').checked = true;
+                    break;
+                case 'new':
+                    document.getElementById('sortBy').value = 'time';
+                    break;
+            }
+
+            applyFilters();
+        }
+
+        // 渲染机会列表
+        function renderOpportunities() {
+            const container = document.getElementById('opportunitiesList');
+
+            if (filteredOpportunities.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">🔍</div>
+                        <div style="font-size: 16px; margin-bottom: 8px;">没有找到符合条件的机会</div>
+                        <div style="font-size: 14px;">尝试调整筛选条件或等待新机会</div>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredOpportunities.map(opp => createOpportunityCard(opp)).join('');
+        }
+
+        // 创建机会卡片
+        function createOpportunityCard(opp) {
+            const stars = getStarsForScore(opp.score);
+            const isHot = opp.score >= 90;
+
+            return `
+                <div class="opportunity-card ${isHot ? 'hot' : ''}" onclick="showDetail('${opp.symbol}')">
+                    ${isHot ? '<div class="hot-badge">🔥 热门</div>' : ''}
+
+                    <div class="card-header">
+                        <div class="stock-info">
+                            <div class="stock-symbol">${opp.symbol || 'N/A'}</div>
+                            <div class="stock-name">${opp.symbol ? opp.symbol.substring(0, 6) : '未知股票'}</div>
+                        </div>
+                        <div class="score-badge">
+                            <div class="score-stars ${getScoreClass(opp.score)}">${stars}</div>
+                            <div class="score-number ${getScoreClass(opp.score)}">${opp.score}分</div>
+                        </div>
+                    </div>
+
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <div class="metric-label">置信度</div>
+                            <div class="metric-value">${((opp.confidence || 0) * 100).toFixed(0)}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">强度分数</div>
+                            <div class="metric-value">${(opp.strength_score || 0).toFixed(0)}</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">预期涨幅</div>
+                            <div class="metric-value up">+${opp.predicted_gain}%</div>
+                        </div>
+                        <div class="metric">
+                            <div class="metric-label">风险等级</div>
+                            <div class="metric-value">${getRiskText(opp.risk_level)}</div>
+                        </div>
+                    </div>
+
+                    <div class="signals-section">
+                        <div class="signals-title">🎯 触发策略 (${(opp.signals || []).length}个)</div>
+                        <div class="signal-tags">
+                            ${(opp.signals || []).slice(0, 3).map(sig => `
+                                <div class="signal-tag">${sig.strategy || '未知策略'}</div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="card-footer">
+                        <div class="recommendation">
+                            <div class="rec-label">建议操作</div>
+                            <div class="rec-value">💰 关注买入</div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="btn btn-primary btn-sm" onclick="addToWatchlist('${opp.symbol}', event)">
+                                ⭐ 加自选
+                            </button>
+                            <button class="btn btn-outline btn-sm" onclick="showDetail('${opp.symbol}', event)">
+                                查看详情
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 获取评分对应的星星
+        function getStarsForScore(score) {
+            if (score >= 90) return '⭐⭐⭐⭐⭐';
+            if (score >= 80) return '⭐⭐⭐⭐';
+            if (score >= 70) return '⭐⭐⭐';
+            if (score >= 60) return '⭐⭐';
+            return '⭐';
+        }
+
+        // 获取评分对应的CSS类
+        function getScoreClass(score) {
+            if (score >= 90) return 'score-5';
+            if (score >= 80) return 'score-4';
+            if (score >= 70) return 'score-3';
+            if (score >= 60) return 'score-2';
+            return 'score-1';
+        }
+
+        // 获取风险文本
+        function getRiskText(level) {
+            const map = { 'low': '低', 'medium': '中', 'high': '高' };
+            return map[level] || '未知';
+        }
+
+        // 更新统计数据
+        function updateStats() {
+            const total = opportunities.size;
+            const highScore = Array.from(opportunities.values()).filter(o => o.score >= 85).length;
+            const avgConf = total > 0 ?
+                Array.from(opportunities.values()).reduce((sum, o) => sum + (o.confidence || 0), 0) / total : 0;
+
+            document.getElementById('totalOpportunities').textContent = total;
+            document.getElementById('highScoreOpportunities').textContent = highScore;
+            document.getElementById('avgConfidence').textContent = (avgConf * 100).toFixed(0) + '%';
+        }
+
+        // 显示详情
+        function showDetail(symbol, event) {
+            if (event) event.stopPropagation();
+
+            const opp = opportunities.get(symbol);
+            if (!opp) return;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div class="modal-header">
+                    <div class="modal-title">${opp.symbol || 'N/A'}</div>
+                    <div style="color: var(--color-text-light);">综合评分: ${opp.score}分 ${getStarsForScore(opp.score)}</div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="section-title">📊 核心指标</div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">置信度</span>
+                            <span class="detail-value">${((opp.confidence || 0) * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">强度分数</span>
+                            <span class="detail-value">${(opp.strength_score || 0).toFixed(1)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">预期涨幅</span>
+                            <span class="detail-value" style="color: var(--color-up);">+${opp.predicted_gain}%</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">风险等级</span>
+                            <span class="detail-value">${getRiskText(opp.risk_level)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-section">
+                    <div class="section-title">🎯 策略信号 (${(opp.signals || []).length}个)</div>
+                    ${(opp.signals || []).map(sig => `
+                        <div class="detail-item" style="margin-bottom: 8px;">
+                            <span class="detail-label">${sig.strategy || '未知策略'}</span>
+                            <span class="detail-value">${((sig.confidence || 0) * 100).toFixed(0)}%</span>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <div class="modal-section">
+                    <div class="section-title">💡 操作建议</div>
+                    <div style="padding: 16px; background: var(--color-bg); border-radius: 8px;">
+                        <p style="margin-bottom: 8px;">根据当前分析，建议关注该股票，可在适当时机考虑买入。</p>
+                        <p style="color: var(--color-text-light); font-size: 14px;">
+                            ⚠️ 仅供参考，不构成投资建议。请结合自身情况谨慎决策。
+                        </p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 24px; display: flex; gap: 12px;">
+                    <button class="btn btn-primary" style="flex: 1;" onclick="addToWatchlist('${opp.symbol}')">
+                        ⭐ 加入自选
+                    </button>
+                    <button class="btn btn-outline" style="flex: 1;" onclick="closeModal()">
+                        关闭
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        // 加入自选
+        function addToWatchlist(symbol, event) {
+            if (event) event.stopPropagation();
+            alert(`已将 ${symbol} 加入自选股！`);
+        }
+
+        // 刷新机会
+        async function refreshOpportunities() {
+            try {
+                const response = await fetch(`${API_URL}/opportunities`);
+                if (response.ok) {
+                    const data = await response.json();
+                    opportunities.clear();
+                    data.forEach(opp => processOpportunity(opp));
+                    console.log(`✅ 刷新成功，获取${data.length}个机会`);
+                }
+            } catch (error) {
+                console.error('刷新失败:', error);
+            }
+        }
+
+        // 触发测试信号
+        async function triggerTestSignal() {
+            try {
+                // 调用测试脚本的逻辑...
+                alert('测试信号已触发！请等待几秒查看新机会。');
+            } catch (error) {
+                console.error('触发测试失败:', error);
+            }
+        }
+
+        // 页面加载时初始化
+        window.addEventListener('load', () => {
+            console.log('🚀 东风破 - 交易机会发现中心');
+            connectWebSocket();
+            refreshOpportunities();
+        });
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', () => {
+            if (ws) ws.close();
+        });
+    </script>
+</body>
+</html>

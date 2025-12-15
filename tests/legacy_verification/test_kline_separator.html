@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>K线分隔线测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        #chart {
+            width: 100%;
+            height: 600px;
+        }
+        .info {
+            margin: 20px 0;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h2>5分钟K线分隔线测试</h2>
+        <p>测试日期分隔线是否正确显示</p>
+    </div>
+    <div id="chart"></div>
+    
+    <script>
+        // 初始化图表
+        const chart = echarts.init(document.getElementById('chart'), 'dark');
+        
+        // 模拟5分钟K线数据
+        const generateKlineData = () => {
+            const data = [];
+            const dates = [];
+            
+            // 生成两天的数据
+            const times1 = [
+                '2025-08-06 14:45', '2025-08-06 14:50', '2025-08-06 14:55', '2025-08-06 15:00'
+            ];
+            const times2 = [
+                '2025-08-07 09:30', '2025-08-07 09:35', '2025-08-07 09:40', '2025-08-07 09:45',
+                '2025-08-07 09:50', '2025-08-07 09:55', '2025-08-07 10:00', '2025-08-07 10:05'
+            ];
+            
+            const allTimes = [...times1, ...times2];
+            
+            allTimes.forEach((time, i) => {
+                dates.push(time);
+                const basePrice = 100 + Math.random() * 10;
+                data.push([
+                    basePrice + Math.random() * 2,  // open
+                    basePrice + Math.random() * 2,  // close
+                    basePrice - Math.random(),      // low
+                    basePrice + Math.random() * 3   // high
+                ]);
+            });
+            
+            return { dates, data };
+        };
+        
+        const { dates, data: klineData } = generateKlineData();
+        
+        // 生成分隔线
+        const generateSeparators = () => {
+            const separators = [];
+            let lastDate = null;
+            
+            dates.forEach((dateStr, index) => {
+                const currentDate = dateStr.split(' ')[0];
+                if (lastDate && currentDate !== lastDate) {
+                    console.log(`添加分隔线在索引 ${index}, 从 ${lastDate} 到 ${currentDate}`);
+                    separators.push({
+                        xAxis: index
+                    });
+                }
+                lastDate = currentDate;
+            });
+            
+            return separators;
+        };
+        
+        const separators = generateSeparators();
+        console.log('分隔线位置:', separators);
+        
+        // 配置选项
+        const option = {
+            title: {
+                text: '5分钟K线 - 日期分隔线测试',
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                }
+            },
+            xAxis: {
+                type: 'category',
+                data: dates,
+                scale: true,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#777' } },
+                splitLine: { show: false }
+            },
+            yAxis: {
+                scale: true,
+                splitArea: {
+                    show: true
+                }
+            },
+            series: [
+                {
+                    name: 'K线',
+                    type: 'candlestick',
+                    data: klineData,
+                    itemStyle: {
+                        color: '#ec0000',
+                        color0: '#00da3c',
+                        borderColor: '#8A0000',
+                        borderColor0: '#008F28'
+                    },
+                    markLine: {
+                        symbol: 'none',
+                        data: separators.map(sep => ({
+                            xAxis: sep.xAxis,
+                            lineStyle: {
+                                type: 'dashed',
+                                color: 'rgba(255, 255, 0, 0.6)',
+                                width: 2
+                            },
+                            label: {
+                                show: true,
+                                formatter: '日期分隔',
+                                position: 'end'
+                            }
+                        }))
+                    }
+                }
+            ]
+        };
+        
+        // 设置配置项
+        chart.setOption(option);
+        
+        // 输出调试信息
+        console.log('图表配置:', option);
+        console.log('K线数据数量:', klineData.length);
+        console.log('日期数据:', dates);
+    </script>
+</body>
+</html>

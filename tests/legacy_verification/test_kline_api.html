@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>K线API数据测试</title>
+    <style>
+        body {
+            margin: 20px;
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        button {
+            background: #00da3c;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00ff4c;
+        }
+        pre {
+            background: #000;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            overflow: auto;
+            max-height: 600px;
+            white-space: pre-wrap;
+        }
+        .info {
+            background: #222;
+            border: 1px solid #444;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>K线API数据格式测试</h1>
+        
+        <div class="info">
+            <p>测试不同周期K线数据的日期格式，找出分隔线不显示的原因</p>
+        </div>
+        
+        <div>
+            <button onclick="testDailyKline()">测试日K线</button>
+            <button onclick="test5MinKline()">测试5分钟K线</button>
+            <button onclick="test15MinKline()">测试15分钟K线</button>
+            <button onclick="clearResults()">清空结果</button>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+        const stockCode = '600000'; // 浦发银行
+        
+        async function fetchKlineData(period, periodName) {
+            resultsDiv.innerHTML += `<h3>📊 ${periodName}数据</h3>`;
+            
+            try {
+                const response = await fetch(`http://localhost:9000/api/kline/${stockCode}?period=${period}&count=50`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data) {
+                    const klines = data.data;
+                    
+                    // 显示前5条和后5条数据
+                    const firstFive = klines.slice(0, 5);
+                    const lastFive = klines.slice(-5);
+                    
+                    resultsDiv.innerHTML += `<pre>总数据条数: ${klines.length}
+
+前5条数据:
+${JSON.stringify(firstFive, null, 2)}
+
+后5条数据:
+${JSON.stringify(lastFive, null, 2)}
+
+日期格式分析:
+第一条日期: ${firstFive[0]?.date}
+最后一条日期: ${lastFive[lastFive.length - 1]?.date}
+</pre>`;
+                    
+                    // 检测日期变化
+                    analyzeDataTransitions(klines, periodName);
+                    
+                } else {
+                    resultsDiv.innerHTML += `<pre>错误: ${JSON.stringify(data)}</pre>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML += `<pre>请求失败: ${error.message}</pre>`;
+            }
+        }
+        
+        function analyzeDataTransitions(klines, periodName) {
+            resultsDiv.innerHTML += `<h4>日期变化分析 (${periodName})</h4><pre>`;
+            
+            let lastDate = null;
+            let transitions = [];
+            
+            klines.forEach((item, index) => {
+                let currentDate = item.date;
+                
+                // 提取日期部分
+                if (currentDate.includes(' ')) {
+                    currentDate = currentDate.split(' ')[0];
+                } else if (currentDate.includes('T')) {
+                    currentDate = currentDate.split('T')[0];
+                }
+                
+                if (lastDate && currentDate !== lastDate) {
+                    transitions.push({
+                        index: index,
+                        fromDate: lastDate,
+                        toDate: currentDate,
+                        fullDate: item.date
+                    });
+                }
+                lastDate = currentDate;
+            });
+            
+            if (transitions.length > 0) {
+                resultsDiv.innerHTML += `检测到 ${transitions.length} 个日期变化点:\n`;
+                transitions.forEach(t => {
+                    resultsDiv.innerHTML += `  Index ${t.index}: ${t.fromDate} -> ${t.toDate} (完整: ${t.fullDate})\n`;
+                });
+            } else {
+                resultsDiv.innerHTML += `未检测到日期变化（所有数据在同一天）\n`;
+            }
+            
+            resultsDiv.innerHTML += `</pre>`;
+        }
+        
+        function testDailyKline() {
+            fetchKlineData('daily', '日K线');
+        }
+        
+        function test5MinKline() {
+            fetchKlineData('5min', '5分钟K线');
+        }
+        
+        function test15MinKline() {
+            fetchKlineData('15min', '15分钟K线');
+        }
+        
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+        
+        // 默认测试5分钟K线
+        test5MinKline();
+    </script>
+</body>
+</html>

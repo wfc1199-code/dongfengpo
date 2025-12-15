@@ -1,0 +1,61 @@
+请在浏览器中按 F12 打开开发者工具，切换到 Console 标签，然后复制粘贴以下代码并按回车：
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+fetch('/api/options/MO2511-P-7400/minute')
+  .then(r => r.json())
+  .then(data => {
+    console.clear();
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('🔍 完整数据诊断');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
+    const now = new Date();
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    
+    console.log('\n⏰ 时间信息:');
+    console.log('  当前时间:', currentTime);
+    
+    if (data.data && data.data.length > 0) {
+      const lastPoint = data.data[data.data.length - 1];
+      console.log('  最新数据时间:', lastPoint.time);
+      console.log('  最新价格:', lastPoint.price, '元');
+      
+      const [h, m] = lastPoint.time.split(':').map(Number);
+      const delay = (now.getHours() * 60 + now.getMinutes()) - (h * 60 + m);
+      console.log('  实际延迟:', delay, '分钟', delay <= 1 ? '✅' : '❌');
+    }
+    
+    console.log('\n📊 freshness字段:');
+    if (data.freshness) {
+      console.log('  ✅ freshness存在');
+      console.log('  data_time:', data.freshness.data_time);
+      console.log('  current_time:', data.freshness.current_time);
+      console.log('  delay_minutes:', data.freshness.delay_minutes);
+      console.log('  description:', data.freshness.description);
+    } else {
+      console.log('  ❌ freshness不存在');
+    }
+    
+    console.log('\n🔍 顶层字段检查:');
+    console.log('  data.data_time:', data.data_time || 'undefined');
+    console.log('  data.current_time:', data.current_time || 'undefined');
+    
+    console.log('\n📈 数据点信息:');
+    console.log('  总数据点:', data.count);
+    console.log('  后5个数据点:');
+    data.data.slice(-5).forEach(p => {
+      console.log(`    ${p.time} - ${p.price}元`);
+    });
+    
+    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('请截图此输出发给我');
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  })
+  .catch(err => {
+    console.error('请求失败:', err);
+  });
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+执行后，请截图Console的输出发给我。

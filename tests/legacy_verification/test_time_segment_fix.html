@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间分层修复测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .segment { border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }
+        .segment-header { font-weight: bold; color: #333; margin-bottom: 10px; }
+        .stock-count { color: #e74c3c; font-weight: bold; }
+        .stock-list { margin-left: 20px; }
+        .stock-item { padding: 5px; border-bottom: 1px solid #eee; }
+        .api-test { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        .success { color: #27ae60; }
+        .error { color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <h1>🔧 时间分层显示修复测试</h1>
+    
+    <div class="api-test">
+        <h3>API测试结果</h3>
+        <div id="api-result">正在测试API...</div>
+    </div>
+    
+    <div id="time-segments">
+        <!-- 时间段数据将在这里显示 -->
+    </div>
+
+    <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            const segmentsDiv = document.getElementById('time-segments');
+            
+            try {
+                // 测试修复后的API
+                resultDiv.innerHTML = '正在获取数据...';
+                
+                const response = await fetch('http://localhost:9000/api/time-segmented/predictions');
+                const data = await response.json();
+                
+                if (data.code === 200) {
+                    resultDiv.innerHTML = `<span class="success">✅ API调用成功</span><br>
+                        总计股票: ${data.data.statistics.total_stocks}只<br>
+                        有数据的时间段: ${data.data.statistics.non_empty_segments}个`;
+                    
+                    // 显示时间段数据
+                    let html = '<h2>📊 时间段分层数据</h2>';
+                    
+                    data.data.segments.forEach((segmentData, index) => {
+                        const segment = segmentData.segment;
+                        const stocks = segmentData.stocks;
+                        const summary = segmentData.summary;
+                        
+                        html += `
+                            <div class="segment">
+                                <div class="segment-header">
+                                    ${segment.name} (${segment.period})
+                                    <span class="stock-count">${summary.count}只</span>
+                                </div>
+                                <div class="segment-description">${segment.description}</div>
+                                <div class="segment-strategy">策略: ${segment.strategy}</div>
+                                ${summary.count > 0 ? `
+                                    <div class="stock-list">
+                                        <strong>股票列表 (前5只):</strong><br>
+                                        ${stocks.slice(0, 5).map(stock => `
+                                            <div class="stock-item">
+                                                ${stock.code} ${stock.name} 
+                                                (涨幅: ${stock.changePercent}%, 分数: ${stock.predictionScore})
+                                            </div>
+                                        `).join('')}
+                                        ${stocks.length > 5 ? `<div class="stock-item">...还有${stocks.length - 5}只</div>` : ''}
+                                    </div>
+                                ` : '<div class="stock-list">暂无股票</div>'}
+                            </div>
+                        `;
+                    });
+                    
+                    segmentsDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ API返回错误: ${data.message}</span>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">❌ 请求失败: ${error.message}</span>`;
+            }
+        }
+        
+        // 页面加载时测试API
+        testAPI();
+        
+        // 每30秒重新测试
+        setInterval(testAPI, 30000);
+    </script>
+</body>
+</html>

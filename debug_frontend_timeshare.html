@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>调试期权分时数据</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>调试期权分时数据获取</h1>
+    <div id="output"></div>
+
+    <script>
+        async function testOptionTimeshare() {
+            const output = document.getElementById('output');
+            output.innerHTML = '<h3>测试中...</h3>';
+
+            try {
+                // 1. 直接调用后端API
+                output.innerHTML += '<h4>1. 直接调用后端API</h4>';
+                const backendResponse = await fetch('http://localhost:9000/api/options/MO2511-C-7400/minute');
+                const backendData = await backendResponse.json();
+
+                output.innerHTML += `<pre>${JSON.stringify(backendData, null, 2)}</pre>`;
+                output.innerHTML += `<p>后端返回数据点数: ${backendData.data ? backendData.data.length : 0}</p>`;
+
+                // 2. 使用前端timeshare服务
+                output.innerHTML += '<h4>2. 使用前端timeshare服务</h4>';
+
+                // 模拟 isOptionCode 函数
+                function isOptionCode(symbol) {
+                    return symbol.includes('-') &&
+                           (symbol.includes('-C-') || symbol.includes('-P-')) &&
+                           /^\d+$/.test(symbol.split('-')[0]);
+                }
+
+                // 模拟获取API URL
+                function getLegacyApiUrl(endpoint) {
+                    return `http://localhost:9000${endpoint}`;
+                }
+
+                // 模拟 normalizeLegacyResponse 函数
+                function normalizeLegacyResponse(symbol, raw) {
+                    if (!raw) return null;
+
+                    const optionMode = isOptionCode(symbol);
+                    const candidatePoints = optionMode
+                        ? Array.isArray(raw.data) ? raw.data : []
+                        : Array.isArray(raw.minute_data)
+                            ? raw.minute_data
+                            : Array.isArray(raw.timeshare_data)
+                                ? raw.timeshare_data
+                                : Array.isArray(raw.data)
+                                    ? raw.data
+                                    : [];
+
+                    output.innerHTML += `<p>Option模式: ${optionMode}</p>`;
+                    output.innerHTML += `<p>候选数据点数: ${candidatePoints.length}</p>`;
+                    output.innerHTML += `<p>原始data: ${JSON.stringify(raw.data)}</p>`;
+
+                    if (!Array.isArray(candidatePoints) || candidatePoints.length === 0) {
+                        output.innerHTML += '<p style="color: red">❌ 数据点为空，返回null</p>';
+                        return null;
+                    }
+
+                    // 转换数据格式
+                    const points = candidatePoints.map(item => ({
+                        timestamp: item.time || '09:30',
+                        price: Number(item.price) || 0,
+                        volume: Number(item.volume) || 0,
+                        avgPrice: Number(item.avgPrice || item.price) || 0
+                    }));
+
+                    output.innerHTML += `<p style="color: green">✅ 成功转换${points.length}个数据点</p>`;
+
+                    return {
+                        status: 'ok',
+                        symbol,
+                        points,
+                        meta: {
+                            yesterdayClose: raw.yesterday_close || 0,
+                            isOption: optionMode
+                        }
+                    };
+                }
+
+                // 测试数据规范化
+                const normalized = normalizeLegacyResponse('MO2511-C-7400', backendData);
+
+                if (normalized) {
+                    output.innerHTML += `<h4 style="color: green">✅ 成功获取分时数据</h4>`;
+                    output.innerHTML += `<p>数据点数: ${normalized.points.length}</p>`;
+                    output.innerHTML += `<pre>${JSON.stringify(normalized, null, 2)}</pre>`;
+                } else {
+                    output.innerHTML += `<h4 style="color: red">❌ 数据规范化失败</h4>`;
+                }
+
+            } catch (error) {
+                output.innerHTML += `<h4 style="color: red">错误: ${error.message}</h4>`;
+                output.innerHTML += `<pre>${error.stack}</pre>`;
+            }
+        }
+
+        // 运行测试
+        testOptionTimeshare();
+    </script>
+</body>
+</html>

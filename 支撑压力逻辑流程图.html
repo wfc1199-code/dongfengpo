@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>支撑压力系统逻辑流程图</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .flow-section {
+            margin-bottom: 50px;
+        }
+        
+        .section-title {
+            font-size: 1.8em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        
+        .flow-step {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            width: 100%;
+            max-width: 600px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .flow-step:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: #3498db;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .step-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            margin-left: 20px;
+        }
+        
+        .step-content {
+            color: #555;
+            line-height: 1.6;
+            margin-left: 20px;
+        }
+        
+        .arrow {
+            font-size: 2em;
+            color: #3498db;
+            margin: 10px 0;
+        }
+        
+        .formula-box {
+            background: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .formula {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        
+        .rating-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .rating-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        
+        .rating-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+        
+        .rating-grade {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .grade-s { color: #e74c3c; }
+        .grade-a { color: #f39c12; }
+        .grade-b { color: #f1c40f; }
+        .grade-c { color: #27ae60; }
+        .grade-d { color: #95a5a6; }
+        
+        .factor-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .factor-table th {
+            background: #34495e;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        
+        .factor-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .factor-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .weight-bar {
+            background: #ecf0f1;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .weight-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db, #2ecc71);
+            transition: width 0.3s ease;
+        }
+        
+        .example-box {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .example-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .code-block {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>支撑压力系统逻辑流程</h1>
+            <p>技术分析核心算法详解</p>
+        </div>
+        
+        <div class="content">
+            <!-- 系统概述 -->
+            <div class="flow-section">
+                <h2 class="section-title">系统概述</h2>
+                <p>支撑压力系统通过多种算法识别价格的关键支撑和阻力位，为交易决策提供科学依据。系统结合了传统技术分析理论和现代量化方法。</p>
+            </div>
+            
+            <!-- 计算流程 -->
+            <div class="flow-section">
+                <h2 class="section-title">计算流程</h2>
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">数据获取</div>
+                        <div class="step-content">
+                            获取K线数据（开高低收、成交量、时间戳）
+                            <div class="code-block">
+high_prices = [1420, 1415, 1420, 1410, ...]
+low_prices = [1380, 1385, 1380, 1390, ...]
+volumes = [1000000, 1200000, 800000, ...]
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">↓</div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">固定支撑压力计算</div>
+                        <div class="step-content">
+                            使用通达信公式计算固定支撑压力位
+                            <div class="formula-box">
+                                <div class="formula">
+                                    价格区间 = 最高价 - 最低价<br>
+                                    固定阻力 = 最低价 + 价格区间 × 7/8<br>
+                                    固定支撑 = 最低价 + 价格区间 × 0.5/8
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">↓</div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">动态支撑压力识别</div>
+                        <div class="step-content">
+                            识别局部极值点，使用聚类算法找到关键价位
+                            <ul>
+                                <li>滑动窗口识别极值点</li>
+                                <li>价格聚类相近点位</li>
+                                <li>计算触及次数和强度</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">↓</div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">4</div>
+                        <div class="step-title">成交量分析</div>
+                        <div class="step-content">
+                            基于成交量百分位和ATR计算动态价格带
+                            <ul>
+                                <li>计算成交量百分位数</li>
+                                <li>计算平均真实波幅(ATR)</li>
+                                <li>生成支撑阻力带</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">↓</div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">5</div>
+                        <div class="step-title">强度评级</div>
+                        <div class="step-content">
+                            综合多个因素计算支撑压力位强度并评级
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 评级系统 -->
+            <div class="flow-section">
+                <h2 class="section-title">强度评级系统</h2>
+                
+                <div class="rating-grid">
+                    <div class="rating-item">
+                        <div class="rating-grade grade-s">S级</div>
+                        <div>80分以上</div>
+                        <div>极强支撑压力位</div>
+                    </div>
+                    <div class="rating-item">
+                        <div class="rating-grade grade-a">A级</div>
+                        <div>60-80分</div>
+                        <div>强支撑压力位</div>
+                    </div>
+                    <div class="rating-item">
+                        <div class="rating-grade grade-b">B级</div>
+                        <div>40-60分</div>
+                        <div>中等支撑压力位</div>
+                    </div>
+                    <div class="rating-item">
+                        <div class="rating-grade grade-c">C级</div>
+                        <div>20-40分</div>
+                        <div>弱支撑压力位</div>
+                    </div>
+                </div>
+                
+                <h3>评分因素及权重</h3>
+                <table class="factor-table">
+                    <thead>
+                        <tr>
+                            <th>因素</th>
+                            <th>权重</th>
+                            <th>说明</th>
+                            <th>权重比例</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>触及次数</td>
+                            <td>25%</td>
+                            <td>价格触及该位置的次数</td>
+                            <td>
+                                <div class="weight-bar">
+                                    <div class="weight-fill" style="width: 25%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>成交量</td>
+                            <td>20%</td>
+                            <td>该价位的成交量强度</td>
+                            <td>
+                                <div class="weight-bar">
+                                    <div class="weight-fill" style="width: 20%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>反弹强度</td>
+                            <td>20%</td>
+                            <td>触及后的价格反弹/回落幅度</td>
+                            <td>
+                                <div class="weight-bar">
+                                    <div class="weight-fill" style="width: 20%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>时间跨度</td>
+                            <td>15%</td>
+                            <td>从首次到最近触及的时间跨度</td>
+                            <td>
+                                <div class="weight-bar">
+                                    <div class="weight-fill" style="width: 15%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>多周期确认</td>
+                            <td>10%</td>
+                            <td>多个时间周期的确认</td>
+                            <td>
+                                <div class="weight-bar">
+                                    <div class="weight-fill" style="width: 10%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>最近触及</td>
+                            <td>10%</td>
+                            <td>最近一次触及的时间</td>
+                            <td>
+                                <div class="weight-bar">
+                                    <div class="weight-fill" style="width: 10%"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 计算示例 -->
+            <div class="flow-section">
+                <h2 class="section-title">计算示例</h2>
+                
+                <div class="example-box">
+                    <div class="example-title">示例：某股票支撑位评分计算</div>
+                    <div class="code-block">
+# 基础数据
+touches = 3                    # 触及3次
+volume_ratio = 1.5            # 成交量比率1.5倍
+time_span_ratio = 0.6         # 时间跨度60%
+bounce_strength = 0.03        # 反弹3%
+multi_timeframes = 2          # 2个周期确认
+recency_ratio = 0.8           # 最近触及80%位置
+
+# 各项得分计算
+touches_score = 3 * 5 = 15分
+volume_score = 1.5 * 10 = 15分
+time_span_score = 0.6 * 40 = 24分
+bounce_score = 0.03 * 100 = 3分
+multi_timeframe_score = 2 * 12.5 = 25分
+recency_score = 0.8 * 10 = 8分
+
+# 加权总分
+总分 = 15×0.25 + 15×0.20 + 24×0.15 + 3×0.20 + 25×0.10 + 8×0.10
+    = 3.75 + 3.0 + 3.6 + 0.6 + 2.5 + 0.8
+    = 14.25分 (C级)
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 交易应用 -->
+            <div class="flow-section">
+                <h2 class="section-title">交易应用策略</h2>
+                
+                <div class="flow-diagram">
+                    <div class="flow-step">
+                        <div class="step-number">1</div>
+                        <div class="step-title">支撑位买入策略</div>
+                        <div class="step-content">
+                            <strong>买入条件：</strong>
+                            <ul>
+                                <li>价格接近<span class="highlight">S级或A级</span>支撑位</li>
+                                <li>成交量放大确认</li>
+                                <li>出现反转K线形态</li>
+                            </ul>
+                            <strong>止损设置：</strong>支撑位下方1-2%<br>
+                            <strong>目标价位：</strong>下一个阻力位或支撑位上方3-5%
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">↓</div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">2</div>
+                        <div class="step-title">压力位卖出策略</div>
+                        <div class="step-content">
+                            <strong>卖出条件：</strong>
+                            <ul>
+                                <li>价格接近<span class="highlight">S级或A级</span>压力位</li>
+                                <li>成交量萎缩</li>
+                                <li>出现反转K线形态</li>
+                            </ul>
+                            <strong>止损设置：</strong>压力位上方1-2%<br>
+                            <strong>目标价位：</strong>下一个支撑位或压力位下方3-5%
+                        </div>
+                    </div>
+                    
+                    <div class="arrow">↓</div>
+                    
+                    <div class="flow-step">
+                        <div class="step-number">3</div>
+                        <div class="step-title">突破策略</div>
+                        <div class="step-content">
+                            <strong>向上突破：</strong>
+                            <ul>
+                                <li>价格突破压力位并站稳</li>
+                                <li>成交量显著放大</li>
+                                <li>旧压力位变为新支撑位</li>
+                            </ul>
+                            <strong>向下突破：</strong>
+                            <ul>
+                                <li>价格跌破支撑位</li>
+                                <li>成交量放大确认</li>
+                                <li>旧支撑位变为新压力位</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 系统优势 -->
+            <div class="flow-section">
+                <h2 class="section-title">系统优势</h2>
+                <div class="rating-grid">
+                    <div class="rating-item">
+                        <div style="font-size: 2em; color: #3498db;">📊</div>
+                        <div><strong>多维度分析</strong></div>
+                        <div>结合价格、成交量、时间等多个维度</div>
+                    </div>
+                    <div class="rating-item">
+                        <div style="font-size: 2em; color: #e74c3c;">🎯</div>
+                        <div><strong>量化评级</strong></div>
+                        <div>科学的评分体系和明确的交易建议</div>
+                    </div>
+                    <div class="rating-item">
+                        <div style="font-size: 2em; color: #27ae60;">⚡</div>
+                        <div><strong>实时更新</strong></div>
+                        <div>实时计算和动态调整支撑压力位</div>
+                    </div>
+                    <div class="rating-item">
+                        <div style="font-size: 2em; color: #f39c12;">🔄</div>
+                        <div><strong>多周期确认</strong></div>
+                        <div>多个时间周期的综合分析</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 注意事项 -->
+            <div class="flow-section">
+                <h2 class="section-title">重要注意事项</h2>
+                <div class="example-box">
+                    <div class="example-title">⚠️ 风险提示</div>
+                    <ul>
+                        <li><strong>市场环境：</strong>支撑压力在趋势市场中更有效，震荡市场中效果更佳</li>
+                        <li><strong>风险控制：</strong>支撑压力位不是100%准确，需要结合其他技术指标</li>
+                        <li><strong>资金管理：</strong>分批建仓，控制单次风险，保持资金流动性</li>
+                        <li><strong>止损纪律：</strong>严格执行止损，避免情绪化交易</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

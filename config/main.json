@@ -1,0 +1,42 @@
+{
+  "anomaly": {
+    "speed_threshold": 0.5,
+    "volume_ratio_threshold": 2.0,
+    "anomaly_interval": 5,
+    "big_order_threshold": 6000,
+    "capital_threshold": 3000000
+  },
+  "monitor": {
+    "interval": 3,
+    "enable_alerts": true,
+    "alert_threshold": 0.7
+  },
+  "markets": {
+    "sh": true,
+    "sz": true,
+    "cy": true,
+    "kc": true
+  },
+  "monitoring": {
+    "update_intervals": {
+      "realtime_data": 5
+    },
+    "base_stocks": []
+  },
+  "user_customization": {
+    "自定义监控": {
+      "自选股票池": [
+        "300109",
+        "603538",
+        "603823",
+        "002406"
+      ]
+    }
+  },
+  "early_warning": {
+    "volume_surge_threshold": 1.8,
+    "big_order_frequency": 3,
+    "bid_ask_ratio": 1.5,
+    "early_detection_window": 3
+  }
+}

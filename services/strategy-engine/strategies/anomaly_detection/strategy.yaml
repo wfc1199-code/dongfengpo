@@ -1,0 +1,64 @@
+# 异动检测策略配置
+# 从Legacy anomaly_detection.py迁移
+
+name: anomaly_detection
+version: 2.0.0
+author: dongfengpo_team
+description: |
+  股票异动检测策略 - 多维度检测
+  - 涨速异动: 短时间内快速上涨
+  - 放量异动: 成交量突然放大
+  - 大单异动: 大额买单频繁出现
+  - 资金流入: 主动买入资金流入
+
+# 策略所需特征
+dependencies:
+  - price                    # 当前价格
+  - price_change_rate        # 涨跌幅
+  - volume                   # 成交量
+  - volume_ratio             # 量比
+  - turnover_rate            # 换手率
+  - avg_price                # 均价
+  - change_speed             # 涨速(每分钟涨幅)
+
+# 策略参数
+parameters:
+  # 涨速异动参数
+  speed_threshold: 0.02            # 涨速阈值2%/分钟
+  speed_confidence_base: 0.75      # 基础置信度
+
+  # 放量异动参数
+  volume_threshold: 2.0            # 量比阈值(2倍)
+  volume_confidence_base: 0.70     # 基础置信度
+
+  # 大单异动参数
+  big_order_threshold: 3000000     # 大单阈值(300万元)
+  big_order_frequency: 3           # 5分钟内出现次数
+
+  # 资金流入参数
+  capital_inflow_threshold: 5000000  # 资金流入阈值(500万)
+
+  # 综合评分参数
+  multi_signal_bonus: 0.1          # 多信号叠加加成
+
+# 风险控制
+risk_controls:
+  max_signals_per_minute: 20       # 每分钟最大信号数
+  min_confidence: 0.60             # 最低置信度
+  blacklist_sectors: ["ST", "退市"]  # 黑名单板块
+
+# 时间控制
+time_controls:
+  enabled: true
+  trading_hours_only: true
+  skip_first_minutes: 5            # 跳过开盘前5分钟
+  skip_last_minutes: 10            # 跳过收盘前10分钟
+
+# 回测指标(参考)
+backtest:
+  test_period: "2024-01-01 to 2024-12-31"
+  metrics:
+    precision: 0.72                # 准确率72%
+    recall: 0.68                   # 召回率68%
+    f1_score: 0.70                 # F1分数0.70
+    avg_advance_time: 180          # 平均提前时间3分钟

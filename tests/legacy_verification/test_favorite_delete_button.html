@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自选股删除按钮测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #e5e5e5; }
+        .test-section { border: 1px solid #444; margin: 20px 0; padding: 15px; border-radius: 5px; }
+        .test-title { font-weight: bold; color: #4fc3f7; margin-bottom: 10px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #2e7d32; color: white; }
+        .error { background: #d32f2f; color: white; }
+        .info { background: #1976d2; color: white; }
+        .favorite-list { background: #2a2a2a; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .favorite-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #444;
+        }
+        .delete-btn { 
+            background: #d32f2f; 
+            color: white; 
+            border: none; 
+            padding: 5px 10px; 
+            border-radius: 3px; 
+            cursor: pointer;
+        }
+        .delete-btn:hover { background: #f44336; }
+        .add-section { margin: 15px 0; }
+        .add-input { padding: 8px; margin-right: 10px; background: #333; color: white; border: 1px solid #555; }
+        .add-btn { background: #4caf50; color: white; border: none; padding: 8px 15px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🗑️ 自选股删除按钮测试</h1>
+    
+    <div class="test-section">
+        <div class="test-title">当前配置状态</div>
+        <div id="config-status">正在检查配置...</div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">自选股列表</div>
+        <div id="favorites-list">正在加载...</div>
+        
+        <div class="add-section">
+            <input type="text" id="stock-input" placeholder="输入股票代码 (如: 000001)" class="add-input">
+            <button onclick="addFavorite()" class="add-btn">添加自选股</button>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <div class="test-title">API测试结果</div>
+        <div id="api-results">
+            <button onclick="testGetConfig()" style="margin: 5px; padding: 8px 15px;">测试获取配置</button>
+            <button onclick="testAddFavorite()" style="margin: 5px; padding: 8px 15px;">测试添加</button>
+            <button onclick="testDeleteFavorite()" style="margin: 5px; padding: 8px 15px;">测试删除</button>
+        </div>
+        <div id="test-output"></div>
+    </div>
+
+    <script>
+        let currentFavorites = [];
+        
+        // 加载当前配置
+        async function loadConfig() {
+            try {
+                const response = await fetch('http://localhost:9000/api/config');
+                const config = await response.json();
+                
+                console.log('配置数据:', config);
+                
+                const favorites = config.user_customization?.自定义监控?.自选股票池 || [];
+                currentFavorites = favorites;
+                
+                document.getElementById('config-status').innerHTML = `
+                    <div class="success">✅ 配置加载成功</div>
+                    <div>自选股数量: ${favorites.length}</div>
+                `;
+                
+                renderFavorites(favorites);
+            } catch (error) {
+                document.getElementById('config-status').innerHTML = `
+                    <div class="error">❌ 配置加载失败: ${error.message}</div>
+                `;
+            }
+        }
+        
+        // 渲染自选股列表
+        function renderFavorites(favorites) {
+            const container = document.getElementById('favorites-list');
+            
+            if (favorites.length === 0) {
+                container.innerHTML = '<div class="info">📝 暂无自选股</div>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="favorite-list">
+                    ${favorites.map(code => `
+                        <div class="favorite-item">
+                            <span><strong>${code}</strong></span>
+                            <button class="delete-btn" onclick="deleteFavorite('${code}')">
+                                ✕ 删除
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+        
+        // 添加自选股
+        async function addFavorite() {
+            const input = document.getElementById('stock-input');
+            const code = input.value.trim();
+            
+            if (!code) {
+                alert('请输入股票代码');
+                return;
+            }
+            
+            try {
+                const newFavorites = [...currentFavorites, code];
+                
+                const response = await fetch('http://localhost:9000/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_customization: {
+                            自定义监控: {
+                                自选股票池: newFavorites
+                            }
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    currentFavorites = newFavorites;
+                    renderFavorites(newFavorites);
+                    input.value = '';
+                    logTest(`✅ 添加成功: ${code}`);
+                } else {
+                    logTest(`❌ 添加失败: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                logTest(`❌ 添加失败: ${error.message}`);
+            }
+        }
+        
+        // 删除自选股
+        async function deleteFavorite(code) {
+            try {
+                const newFavorites = currentFavorites.filter(c => c !== code);
+                
+                const response = await fetch('http://localhost:9000/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_customization: {
+                            自定义监控: {
+                                自选股票池: newFavorites
+                            }
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    currentFavorites = newFavorites;
+                    renderFavorites(newFavorites);
+                    logTest(`✅ 删除成功: ${code}`);
+                } else {
+                    logTest(`❌ 删除失败: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                logTest(`❌ 删除失败: ${error.message}`);
+            }
+        }
+        
+        // 测试函数
+        async function testGetConfig() {
+            logTest('🔍 测试获取配置...');
+            await loadConfig();
+        }
+        
+        async function testAddFavorite() {
+            logTest('📝 测试添加自选股...');
+            const testCode = '000001';
+            if (!currentFavorites.includes(testCode)) {
+                document.getElementById('stock-input').value = testCode;
+                await addFavorite();
+            } else {
+                logTest(`⚠️ ${testCode} 已在自选股中`);
+            }
+        }
+        
+        async function testDeleteFavorite() {
+            logTest('🗑️ 测试删除自选股...');
+            if (currentFavorites.length > 0) {
+                await deleteFavorite(currentFavorites[0]);
+            } else {
+                logTest('⚠️ 没有自选股可删除');
+            }
+        }
+        
+        function logTest(message) {
+            const output = document.getElementById('test-output');
+            const time = new Date().toLocaleTimeString();
+            output.innerHTML += `<div>[${time}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        // 初始化
+        loadConfig();
+    </script>
+</body>
+</html>
+

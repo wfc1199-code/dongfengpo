@@ -1,0 +1,56 @@
+{
+  "description": "Unified message envelope for WS/streams.",
+  "example": {
+    "payload": {
+      "id": "sh600000-1709888400",
+      "symbol": "sh600000"
+    },
+    "produced_at": "2025-12-13T00:00:00Z",
+    "producer": "signal-streamer",
+    "schema_version": "1.0",
+    "trace_id": "4bf92f3577b34da6a3ce929d0e0e4736",
+    "type": "opportunity"
+  },
+  "properties": {
+    "payload": {
+      "description": "业务负载（契约模型或可解析对象）",
+      "title": "Payload"
+    },
+    "produced_at": {
+      "description": "生产时间 (UTC)",
+      "format": "date-time",
+      "title": "Produced At",
+      "type": "string"
+    },
+    "producer": {
+      "description": "生产者标识",
+      "title": "Producer",
+      "type": "string"
+    },
+    "schema_version": {
+      "description": "契约版本",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "trace_id": {
+      "description": "链路追踪ID",
+      "title": "Trace Id",
+      "type": "string"
+    },
+    "type": {
+      "description": "消息类型，如 opportunity/risk_alert",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "trace_id",
+    "producer",
+    "produced_at",
+    "type",
+    "payload"
+  ],
+  "title": "MessageEnvelope",
+  "type": "object"
+}

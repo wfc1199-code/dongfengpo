@@ -1,0 +1,239 @@
+name: dongfengpo
+
+x-python-service: &python-service
+  image: python:3.12-slim
+  working_dir: /app
+  volumes:
+    - ./:/app
+  environment:
+    PYTHONUNBUFFERED: "1"
+    REDIS_URL: redis://redis:6379/0
+  networks:
+    - dongfengpo-network
+
+services:
+  backend:
+    build: ./backend
+    container_name: dongfengpo-backend
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://user:password@db:5432/dongfengpo
+      - REDIS_URL=redis://redis:6379/0
+      - USE_REAL_DATA=false
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./backend/data:/app/data
+      - ./backend/logs:/app/logs
+    depends_on:
+      - db
+      - redis
+    networks:
+      - dongfengpo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: dongfengpo-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - dongfengpo-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  db:
+    image: postgres:15-alpine
+    container_name: dongfengpo-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=dongfengpo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - dongfengpo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dongfengpo-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    networks:
+      - dongfengpo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  collector-gateway:
+    <<: *python-service
+    container_name: collector-gateway
+    command: bash -c "pip install -r services/collector-gateway/requirements.txt && python services/collector-gateway/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  stream-buffer:
+    <<: *python-service
+    container_name: stream-buffer
+    command: bash -c "pip install -r services/stream-buffer/requirements.txt && python services/stream-buffer/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  data-cleaner:
+    <<: *python-service
+    container_name: data-cleaner
+    command: bash -c "pip install -r services/data-cleaner/requirements.txt && python services/data-cleaner/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+      stream-buffer:
+        condition: service_started
+
+  data-lake-writer:
+    <<: *python-service
+    container_name: data-lake-writer
+    command: bash -c "pip install -r services/data-lake-writer/requirements.txt && python services/data-lake-writer/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+      data-cleaner:
+        condition: service_started
+
+  feature-pipeline:
+    <<: *python-service
+    container_name: feature-pipeline
+    command: bash -c "pip install -r services/feature-pipeline/requirements.txt && python services/feature-pipeline/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+      data-cleaner:
+        condition: service_started
+
+  strategy-engine:
+    <<: *python-service
+    container_name: strategy-engine
+    command: bash -c "pip install -r services/strategy-engine/requirements.txt && python services/strategy-engine/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+      feature-pipeline:
+        condition: service_started
+
+  opportunity-aggregator:
+    <<: *python-service
+    container_name: opportunity-aggregator
+    command: bash -c "pip install -r services/opportunity-aggregator/requirements.txt && python services/opportunity-aggregator/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+      strategy-engine:
+        condition: service_started
+
+  risk-guard:
+    <<: *python-service
+    container_name: risk-guard
+    command: bash -c "pip install -r services/risk-guard/requirements.txt && python services/risk-guard/main.py"
+    depends_on:
+      redis:
+        condition: service_healthy
+      opportunity-aggregator:
+        condition: service_started
+
+  signal-api:
+    <<: *python-service
+    container_name: signal-api
+    command: bash -c "pip install -r services/signal-api/requirements.txt && python services/signal-api/main.py"
+    ports:
+      - "8000:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      opportunity-aggregator:
+        condition: service_started
+
+  signal-streamer:
+    <<: *python-service
+    container_name: signal-streamer
+    command: bash -c "pip install -r services/signal-streamer/requirements.txt && python services/signal-streamer/main.py"
+    ports:
+      - "8100:8100"
+    depends_on:
+      redis:
+        condition: service_healthy
+      opportunity-aggregator:
+        condition: service_started
+
+  backtest-service:
+    <<: *python-service
+    container_name: backtest-service
+    command: bash -c "pip install -r services/backtest-service/requirements.txt && python services/backtest-service/main.py"
+    ports:
+      - "8200:8200"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # 监控服务（可选）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dongfengpo-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - dongfengpo-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: dongfengpo-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - dongfengpo-network
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  dongfengpo-network:
+    driver: bridge

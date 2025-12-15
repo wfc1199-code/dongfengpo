@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F10资料查看器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .search-input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .search-btn {
+            padding: 10px 30px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .search-btn:hover {
+            background: #40a9ff;
+        }
+        
+        .stock-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            margin-bottom: 20px;
+        }
+        
+        .stock-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .stock-code {
+            font-size: 18px;
+            color: #666;
+            margin-left: 10px;
+        }
+        
+        .stock-price {
+            text-align: right;
+        }
+        
+        .price-current {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .price-change {
+            font-size: 18px;
+            margin-top: 5px;
+        }
+        
+        .price-up {
+            color: #ff4757;
+        }
+        
+        .price-down {
+            color: #10ac84;
+        }
+        
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            background: white;
+            border: none;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .tab:hover {
+            background: #f0f0f0;
+        }
+        
+        .tab.active {
+            background: #1890ff;
+            color: white;
+        }
+        
+        .content-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .content-panel.active {
+            display: block;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .info-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error {
+            background: #fff2f0;
+            border: 1px solid #ffccc7;
+            color: #ff4d4f;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        
+        .chart-container {
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        .news-item {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .news-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .news-title {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .news-time {
+            font-size: 14px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>F10 股票资料查看器</h1>
+            <div class="search-box">
+                <input type="text" class="search-input" id="stockInput" placeholder="请输入股票代码，如: 688716" value="688716">
+                <button class="search-btn" onclick="searchStock()">查询</button>
+            </div>
+        </div>
+        
+        <div class="stock-info" id="stockInfo" style="display: none;">
+            <div class="stock-header">
+                <div>
+                    <span class="stock-name" id="stockName">--</span>
+                    <span class="stock-code" id="stockCode">--</span>
+                </div>
+                <div class="stock-price">
+                    <div class="price-current" id="currentPrice">--</div>
+                    <div class="price-change" id="priceChange">--</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('basic')">公司概况</button>
+            <button class="tab" onclick="switchTab('finance')">财务数据</button>
+            <button class="tab" onclick="switchTab('holders')">股东信息</button>
+            <button class="tab" onclick="switchTab('news')">最新公告</button>
+            <button class="tab" onclick="switchTab('analysis')">技术分析</button>
+        </div>
+        
+        <div class="content-panel active" id="basic">
+            <h3>公司基本信息</h3>
+            <div class="info-grid" id="basicInfo">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="finance">
+            <h3>主要财务指标</h3>
+            <div class="table-container">
+                <table id="financeTable">
+                    <thead>
+                        <tr>
+                            <th>指标</th>
+                            <th>2024Q3</th>
+                            <th>2024Q2</th>
+                            <th>2024Q1</th>
+                            <th>2023Q4</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="holders">
+            <h3>十大股东</h3>
+            <div class="table-container">
+                <table id="holdersTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>股东名称</th>
+                            <th>持股数量(万股)</th>
+                            <th>持股比例</th>
+                            <th>变动</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="5" class="loading">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="news">
+            <h3>最新公告</h3>
+            <div id="newsList">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="analysis">
+            <h3>技术分析</h3>
+            <div class="chart-container" id="klineChart"></div>
+            <div class="info-grid" id="technicalIndicators">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script>
+        let currentTab = 'basic';
+        let currentStock = '';
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // 切换标签样式
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 切换内容面板
+            document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            
+            // 加载对应数据
+            if (currentStock) {
+                loadTabData(tab);
+            }
+        }
+        
+        async function searchStock() {
+            const stockCode = document.getElementById('stockInput').value.trim();
+            if (!stockCode) {
+                alert('请输入股票代码');
+                return;
+            }
+            
+            currentStock = stockCode;
+            document.getElementById('stockInfo').style.display = 'block';
+            
+            // 更新股票基本信息
+            await updateStockInfo(stockCode);
+            
+            // 加载当前标签数据
+            loadTabData(currentTab);
+        }
+        
+        async function updateStockInfo(stockCode) {
+            try {
+                // 调用简化版API获取股票基本信息和技术指标
+                const [basicRes, technicalRes] = await Promise.all([
+                    fetch(`http://localhost:9000/api/f10v2/basic/${stockCode}`),
+                    fetch(`http://localhost:9000/api/f10v2/technical/${stockCode}`)
+                ]);
+                
+                if (!basicRes.ok || !technicalRes.ok) {
+                    throw new Error('获取股票信息失败');
+                }
+                
+                const basicData = await basicRes.json();
+                const technicalData = await technicalRes.json();
+                
+                const basic = basicData.data || {};
+                const technical = technicalData.data || {};
+                
+                // 更新股票名称和代码
+                document.getElementById('stockName').textContent = basic.name || '未知股票';
+                document.getElementById('stockCode').textContent = stockCode;
+                
+                // 更新价格信息
+                const price = technical.price || 0;
+                const change = technical.change || 0;
+                const changePct = technical.change_pct || 0;
+                
+                document.getElementById('currentPrice').textContent = price.toFixed(2);
+                
+                const priceChangeEl = document.getElementById('priceChange');
+                const changeSign = change >= 0 ? '+' : '';
+                priceChangeEl.textContent = `${changeSign}${change.toFixed(2)} (${changeSign}${changePct.toFixed(2)}%)`;
+                priceChangeEl.className = change >= 0 ? 'price-change price-up' : 'price-change price-down';
+                
+            } catch (error) {
+                console.error('获取股票信息失败:', error);
+                document.getElementById('stockName').textContent = '获取失败';
+                document.getElementById('stockCode').textContent = stockCode;
+                document.getElementById('currentPrice').textContent = '--';
+                document.getElementById('priceChange').textContent = '-- (--)';
+                
+                // 显示错误信息
+                showError('获取股票信息失败: ' + error.message);
+            }
+        }
+        
+        function showError(message) {
+            // 创建错误提示
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            
+            // 插入到搜索框下方
+            const header = document.querySelector('.header');
+            const existingError = header.querySelector('.error');
+            if (existingError) {
+                existingError.remove();
+            }
+            header.appendChild(errorDiv);
+            
+            // 5秒后自动移除
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        async function loadTabData(tab) {
+            switch(tab) {
+                case 'basic':
+                    loadBasicInfo();
+                    break;
+                case 'finance':
+                    loadFinanceData();
+                    break;
+                case 'holders':
+                    loadHoldersData();
+                    break;
+                case 'news':
+                    loadNewsData();
+                    break;
+                case 'analysis':
+                    loadAnalysisData();
+                    break;
+            }
+        }
+        
+        async function loadBasicInfo() {
+            try {
+                document.getElementById('basicInfo').innerHTML = '<div class="loading">加载中...</div>';
+                
+                const response = await fetch(`http://localhost:9000/api/f10v2/basic/${currentStock}`);
+                if (!response.ok) {
+                    throw new Error('获取基本信息失败');
+                }
+                
+                const result = await response.json();
+                const data = result.data || {};
+                
+                const basicInfo = {
+                    '股票名称': data.name || '--',
+                    '所属板块': data.market || '--',
+                    '所属行业': data.industry || '--',
+                    '上市日期': data.list_date || '--',
+                    '总股本': data.total_share || '--',
+                    '流通股本': data.float_share || '--',
+                    '总市值': data.market_cap || '--',
+                    '流通市值': data.float_cap || '--',
+                    '市盈率(TTM)': data.pe_ttm || '--',
+                    '市净率': data.pb || '--',
+                    '主营业务': data.main_business || '--',
+                    '公司地址': data.company_address || '--',
+                    '法人代表': data.legal_person || '--',
+                    '联系电话': data.tel || '--',
+                    '公司网址': data.website || '--',
+                    '员工人数': data.employees || '--'
+                };
+                
+                let html = '<div class="info-grid">';
+                for (const [key, value] of Object.entries(basicInfo)) {
+                    if (value && value !== '--') {
+                        html += `
+                            <div class="info-item">
+                                <div class="info-label">${key}</div>
+                                <div class="info-value">${value}</div>
+                            </div>
+                        `;
+                    }
+                }
+                html += '</div>';
+                
+                document.getElementById('basicInfo').innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载基本信息失败:', error);
+                document.getElementById('basicInfo').innerHTML = 
+                    `<div class="error">加载失败: ${error.message}</div>`;
+            }
+        }
+        
+        async function loadFinanceData() {
+            try {
+                document.querySelector('#financeTable tbody').innerHTML = 
+                    '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+                
+                const response = await fetch(`http://localhost:9000/api/f10v2/finance/${currentStock}`);
+                if (!response.ok) {
+                    throw new Error('获取财务数据失败');
+                }
+                
+                const result = await response.json();
+                const data = result.data || [];
+                
+                if (data.length === 0) {
+                    document.querySelector('#financeTable tbody').innerHTML = 
+                        '<tr><td colspan="5" class="error">暂无财务数据</td></tr>';
+                    return;
+                }
+                
+                // 构建表头
+                let headerHtml = '<tr><th>指标</th>';
+                data.slice(0, 4).forEach(item => {
+                    headerHtml += `<th>${item.period || '--'}</th>`;
+                });
+                headerHtml += '</tr>';
+                document.querySelector('#financeTable thead').innerHTML = headerHtml;
+                
+                // 构建数据行
+                const indicators = [
+                    { key: 'revenue', label: '营业收入' },
+                    { key: 'net_profit', label: '净利润' },
+                    { key: 'gross_margin', label: '毛利率(%)' },
+                    { key: 'net_margin', label: '净利率(%)' },
+                    { key: 'roe', label: 'ROE(%)' },
+                    { key: 'debt_ratio', label: '资产负债率(%)' },
+                    { key: 'eps', label: '每股收益(元)' },
+                    { key: 'bvps', label: '每股净资产(元)' }
+                ];
+                
+                let html = '';
+                indicators.forEach(indicator => {
+                    html += '<tr>';
+                    html += `<td style="font-weight: 600;">${indicator.label}</td>`;
+                    data.slice(0, 4).forEach(item => {
+                        const value = item[indicator.key] || '--';
+                        html += `<td>${value}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                
+                document.querySelector('#financeTable tbody').innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载财务数据失败:', error);
+                document.querySelector('#financeTable tbody').innerHTML = 
+                    `<tr><td colspan="5" class="error">加载失败: ${error.message}</td></tr>`;
+            }
+        }
+        
+        async function loadHoldersData() {
+            try {
+                document.querySelector('#holdersTable tbody').innerHTML = 
+                    '<tr><td colspan="5" class="loading">加载中...</td></tr>';
+                
+                const response = await fetch(`http://localhost:9000/api/f10v2/holders/${currentStock}`);
+                if (!response.ok) {
+                    throw new Error('获取股东数据失败');
+                }
+                
+                const result = await response.json();
+                const data = result.data || [];
+                
+                if (data.length === 0) {
+                    document.querySelector('#holdersTable tbody').innerHTML = 
+                        '<tr><td colspan="5" class="error">暂无股东数据</td></tr>';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach(item => {
+                    const changeClass = item.change === '增持' ? 'price-up' : 
+                                       item.change === '减持' ? 'price-down' : '';
+                    html += '<tr>';
+                    html += `<td>${item.rank || '--'}</td>`;
+                    html += `<td>${item.holder_name || '--'}</td>`;
+                    html += `<td>${item.hold_amount || '--'}</td>`;
+                    html += `<td>${item.hold_ratio || '--'}</td>`;
+                    html += `<td class="${changeClass}">${item.change || '不变'}</td>`;
+                    html += '</tr>';
+                });
+                
+                document.querySelector('#holdersTable tbody').innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载股东数据失败:', error);
+                document.querySelector('#holdersTable tbody').innerHTML = 
+                    `<tr><td colspan="5" class="error">加载失败: ${error.message}</td></tr>`;
+            }
+        }
+        
+        async function loadNewsData() {
+            try {
+                document.getElementById('newsList').innerHTML = '<div class="loading">加载中...</div>';
+                
+                const response = await fetch(`http://localhost:9000/api/f10v2/news/${currentStock}`);
+                if (!response.ok) {
+                    throw new Error('获取公告数据失败');
+                }
+                
+                const result = await response.json();
+                const data = result.data || [];
+                
+                if (data.length === 0) {
+                    document.getElementById('newsList').innerHTML = 
+                        '<div class="error">暂无公告数据</div>';
+                    return;
+                }
+                
+                let html = '';
+                data.forEach(news => {
+                    html += `
+                        <div class="news-item" ${news.url ? `onclick="window.open('${news.url}', '_blank')"` : ''}>
+                            <div class="news-title">${news.title || '无标题'}</div>
+                            <div class="news-time">${news.time || '--'}</div>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('newsList').innerHTML = html;
+                
+            } catch (error) {
+                console.error('加载公告数据失败:', error);
+                document.getElementById('newsList').innerHTML = 
+                    `<div class="error">加载失败: ${error.message}</div>`;
+            }
+        }
+        
+        async function loadAnalysisData() {
+            try {
+                // 获取技术指标
+                const response = await fetch(`http://localhost:9000/api/f10v2/technical/${currentStock}`);
+                if (!response.ok) {
+                    throw new Error('获取技术分析数据失败');
+                }
+                
+                const result = await response.json();
+                const technical = result.data || {};
+                
+                // 显示技术指标
+                const indicators = {
+                    '最新价': technical.price ? technical.price.toFixed(2) : '--',
+                    '今开': technical.open ? technical.open.toFixed(2) : '--',
+                    '最高': technical.high ? technical.high.toFixed(2) : '--',
+                    '最低': technical.low ? technical.low.toFixed(2) : '--',
+                    '昨收': technical.prev_close ? technical.prev_close.toFixed(2) : '--',
+                    '换手率': technical.turnover ? technical.turnover.toFixed(2) + '%' : '--',
+                    '振幅': technical.amplitude ? technical.amplitude.toFixed(2) + '%' : '--',
+                    '市盈率': technical.pe ? technical.pe.toFixed(2) : '--',
+                    '市净率': technical.pb ? technical.pb.toFixed(2) : '--',
+                    '成交量': technical.volume ? (technical.volume / 10000).toFixed(2) + '万' : '--',
+                    '成交额': technical.amount ? (technical.amount / 100000000).toFixed(2) + '亿' : '--'
+                };
+                
+                let html = '<div class="info-grid">';
+                for (const [key, value] of Object.entries(indicators)) {
+                    if (value && value !== '--') {
+                        html += `
+                            <div class="info-item">
+                                <div class="info-label">${key}</div>
+                                <div class="info-value">${value}</div>
+                            </div>
+                        `;
+                    }
+                }
+                html += '</div>';
+                
+                document.getElementById('technicalIndicators').innerHTML = html;
+                
+                // 初始化K线图（使用简单的价格走势图代替）
+                const chartDom = document.getElementById('klineChart');
+                const myChart = echarts.init(chartDom);
+                
+                // 生成简单的价格走势数据
+                const dates = [];
+                const prices = [];
+                const basePrice = technical.price || 100;
+                
+                for (let i = 0; i < 30; i++) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - (30 - i));
+                    dates.push(date.toISOString().split('T')[0]);
+                    
+                    // 生成模拟价格波动
+                    const randomChange = (Math.random() - 0.5) * basePrice * 0.02;
+                    prices.push((basePrice + randomChange).toFixed(2));
+                }
+                
+                const option = {
+                    title: {
+                        text: '价格走势图',
+                        left: 'center'
+                    },
+                    tooltip: {
+                        trigger: 'axis'
+                    },
+                    xAxis: {
+                        type: 'category',
+                        data: dates,
+                        boundaryGap: false
+                    },
+                    yAxis: {
+                        type: 'value',
+                        scale: true
+                    },
+                    series: [{
+                        name: '收盘价',
+                        type: 'line',
+                        data: prices,
+                        smooth: true,
+                        lineStyle: {
+                            width: 2,
+                            color: '#1890ff'
+                        },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [{
+                                    offset: 0, color: 'rgba(24, 144, 255, 0.3)'
+                                }, {
+                                    offset: 1, color: 'rgba(24, 144, 255, 0.1)'
+                                }]
+                            }
+                        }
+                    }]
+                };
+                
+                myChart.setOption(option);
+                
+                // 响应式调整
+                window.addEventListener('resize', () => {
+                    myChart.resize();
+                });
+                
+            } catch (error) {
+                console.error('加载技术分析失败:', error);
+                document.getElementById('technicalIndicators').innerHTML = 
+                    `<div class="error">加载失败: ${error.message}</div>`;
+                document.getElementById('klineChart').innerHTML = 
+                    `<div class="error" style="height: 100%; display: flex; align-items: center; justify-content: center;">
+                        图表加载失败: ${error.message}
+                    </div>`;
+            }
+        }
+        
+        // 页面加载时自动查询
+        window.onload = function() {
+            searchStock();
+        };
+    </script>
+</body>
+</html>

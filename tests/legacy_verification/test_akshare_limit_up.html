@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>东风破 - AI异动拉升检测系统（AkShare数据源）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: #1a1a1a;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 100%);
+            padding: 20px;
+            border-bottom: 2px solid #ff4444;
+            box-shadow: 0 2px 10px rgba(255, 68, 68, 0.3);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+        
+        .status-online {
+            background: #22c55e;
+            color: white;
+        }
+        
+        .status-offline {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #b0b0b0;
+        }
+        
+        .tab:hover {
+            background: #333;
+            color: #fff;
+        }
+        
+        .tab.active {
+            background: #ff4444;
+            color: white;
+            border-color: #ff4444;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 68, 68, 0.2);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4444;
+        }
+        
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        .positive {
+            color: #22c55e;
+        }
+        
+        .negative {
+            color: #ef4444;
+        }
+        
+        .table-container {
+            background: #2c2c2c;
+            border: 1px solid #444;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        .table-header {
+            padding: 15px;
+            background: #333;
+            border-bottom: 1px solid #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .refresh-btn {
+            padding: 8px 16px;
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #ff6666;
+        }
+        
+        .refresh-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            background: #333;
+            color: #fff;
+            padding: 12px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 14px;
+            border-bottom: 2px solid #444;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #3a3a3a;
+            font-size: 14px;
+        }
+        
+        tr:hover {
+            background: #333;
+        }
+        
+        .stock-code {
+            color: #4a9eff;
+            font-weight: 600;
+        }
+        
+        .stock-name {
+            color: #e0e0e0;
+        }
+        
+        .price-up {
+            color: #ff4444;
+            font-weight: 600;
+        }
+        
+        .price-down {
+            color: #22c55e;
+            font-weight: 600;
+        }
+        
+        .change-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .change-limit-up {
+            background: #ff4444;
+            color: white;
+        }
+        
+        .change-strong {
+            background: #ff8844;
+            color: white;
+        }
+        
+        .change-normal {
+            background: #666;
+            color: white;
+        }
+        
+        .time-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #444;
+            border-top-color: #ff4444;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #3a1515;
+            border: 1px solid #ff4444;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            color: #ff8888;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        
+        .sentiment-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .sentiment-bullish {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid #22c55e;
+        }
+        
+        .sentiment-neutral {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+            border: 1px solid #fbbf24;
+        }
+        
+        .sentiment-bearish {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid #ef4444;
+        }
+        
+        .stars {
+            color: #fbbf24;
+        }
+        
+        .update-time {
+            font-size: 12px;
+            color: #999;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>
+            东风破 - AI异动拉升检测系统
+            <span class="status-badge status-online" id="connectionStatus">已连接</span>
+            <span class="update-time" id="updateTime">更新时间: --:--:--</span>
+        </h1>
+    </div>
+    
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('limitUp')">涨停板监控</div>
+            <div class="tab" onclick="switchTab('strong')">强势股追踪</div>
+            <div class="tab" onclick="switchTab('sentiment')">市场情绪</div>
+        </div>
+        
+        <!-- 统计信息 -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-label">涨停股票</div>
+                <div class="stat-value" id="limitUpCount">0</div>
+                <div class="stat-change positive">今日涨停板</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">强势板数</div>
+                <div class="stat-value" id="strongBoardCount">0</div>
+                <div class="stat-change">封板质量高</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">平均换手率</div>
+                <div class="stat-value" id="avgTurnover">0%</div>
+                <div class="stat-change">市场活跃度</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">市场情绪</div>
+                <div class="stat-value" id="marketSentiment">--</div>
+                <div class="stat-change" id="sentimentTrend">--</div>
+            </div>
+        </div>
+        
+        <!-- 涨停板列表 -->
+        <div id="limitUpContent" class="tab-content">
+            <div class="table-container">
+                <div class="table-header">
+                    <span class="table-title">涨停板股票池（实时更新）</span>
+                    <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
+                </div>
+                <div id="limitUpTable">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>正在加载数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 强势股列表 -->
+        <div id="strongContent" class="tab-content" style="display: none;">
+            <div class="table-container">
+                <div class="table-header">
+                    <span class="table-title">强势股票（涨幅5%-9.5%）</span>
+                    <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
+                </div>
+                <div id="strongTable">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>正在加载数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 市场情绪 -->
+        <div id="sentimentContent" class="tab-content" style="display: none;">
+            <div class="table-container">
+                <div class="table-header">
+                    <span class="table-title">市场情绪分析</span>
+                    <button class="refresh-btn" onclick="refreshData()">刷新数据</button>
+                </div>
+                <div id="sentimentTable">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>正在加载数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentTab = 'limitUp';
+        let autoRefreshInterval = null;
+        
+        // 切换标签页
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // 更新标签样式
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // 显示对应内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            if (tab === 'limitUp') {
+                document.getElementById('limitUpContent').style.display = 'block';
+                loadLimitUpData();
+            } else if (tab === 'strong') {
+                document.getElementById('strongContent').style.display = 'block';
+                loadStrongStocks();
+            } else if (tab === 'sentiment') {
+                document.getElementById('sentimentContent').style.display = 'block';
+                loadMarketSentiment();
+            }
+        }
+        
+        // 加载涨停板数据
+        async function loadLimitUpData() {
+            try {
+                const response = await fetch('http://localhost:9000/api/akshare/limit-up-stocks');
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateStats(result.data.summary);
+                    displayLimitUpTable(result.data.stocks);
+                }
+            } catch (error) {
+                console.error('加载涨停板数据失败:', error);
+                document.getElementById('limitUpTable').innerHTML = `
+                    <div class="error">
+                        加载数据失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 加载强势股数据
+        async function loadStrongStocks() {
+            try {
+                const response = await fetch('http://localhost:9000/api/akshare/strong-stocks');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayStrongTable(result.data.stocks);
+                }
+            } catch (error) {
+                console.error('加载强势股数据失败:', error);
+                document.getElementById('strongTable').innerHTML = `
+                    <div class="error">
+                        加载数据失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 加载市场情绪
+        async function loadMarketSentiment() {
+            try {
+                const response = await fetch('http://localhost:9000/api/akshare/market-sentiment');
+                const result = await response.json();
+                
+                if (result.success) {
+                    displaySentimentData(result.data);
+                }
+            } catch (error) {
+                console.error('加载市场情绪失败:', error);
+                document.getElementById('sentimentTable').innerHTML = `
+                    <div class="error">
+                        加载数据失败: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // 更新统计信息
+        function updateStats(summary) {
+            document.getElementById('limitUpCount').textContent = summary['涨停数'] || 0;
+            document.getElementById('strongBoardCount').textContent = summary['强势板数'] || 0;
+            document.getElementById('avgTurnover').textContent = (summary['平均换手率'] || 0) + '%';
+            document.getElementById('marketSentiment').textContent = summary['市场情绪'] || '--';
+            
+            // 更新情绪趋势
+            const sentiment = summary['市场情绪'];
+            const trendElement = document.getElementById('sentimentTrend');
+            if (sentiment === '强势') {
+                trendElement.textContent = '↑ 积极参与';
+                trendElement.className = 'stat-change positive';
+            } else if (sentiment === '中性') {
+                trendElement.textContent = '→ 谨慎操作';
+                trendElement.className = 'stat-change';
+            } else {
+                trendElement.textContent = '↓ 观望为主';
+                trendElement.className = 'stat-change negative';
+            }
+        }
+        
+        // 显示涨停板表格
+        function displayLimitUpTable(stocks) {
+            if (!stocks || stocks.length === 0) {
+                document.getElementById('limitUpTable').innerHTML = `
+                    <div class="empty">暂无涨停板数据</div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>股票代码</th>
+                            <th>股票名称</th>
+                            <th>现价</th>
+                            <th>涨跌幅</th>
+                            <th>成交额(万)</th>
+                            <th>换手率</th>
+                            <th>量比</th>
+                            <th>总市值(亿)</th>
+                            <th>强度</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            stocks.forEach(stock => {
+                const changeClass = stock.change_percent >= 19.5 ? 'change-limit-up' : 
+                                  stock.change_percent >= 9.5 ? 'change-limit-up' : 'change-strong';
+                const stars = '★'.repeat(Math.min(5, Math.floor(stock.strength / 20)));
+                
+                html += `
+                    <tr>
+                        <td class="stock-code">${stock.stock_code}</td>
+                        <td class="stock-name">${stock.stock_name}</td>
+                        <td class="price-up">¥${stock.current_price.toFixed(2)}</td>
+                        <td><span class="${changeClass}">${stock.change_percent.toFixed(2)}%</span></td>
+                        <td>${(stock.amount / 10000).toFixed(0)}</td>
+                        <td>${stock.turnover_rate.toFixed(2)}%</td>
+                        <td>${stock.volume_ratio.toFixed(2)}</td>
+                        <td>${(stock.total_value / 100000000).toFixed(1)}</td>
+                        <td class="stars">${stars} ${stock.strength}%</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('limitUpTable').innerHTML = html;
+        }
+        
+        // 显示强势股表格
+        function displayStrongTable(stocks) {
+            if (!stocks || stocks.length === 0) {
+                document.getElementById('strongTable').innerHTML = `
+                    <div class="empty">暂无强势股数据</div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>股票代码</th>
+                            <th>股票名称</th>
+                            <th>现价</th>
+                            <th>涨跌幅</th>
+                            <th>距涨停</th>
+                            <th>成交额(万)</th>
+                            <th>换手率</th>
+                            <th>量比</th>
+                            <th>强度</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            stocks.forEach(stock => {
+                const stars = '★'.repeat(Math.min(5, Math.floor(stock.strength / 20)));
+                
+                html += `
+                    <tr>
+                        <td class="stock-code">${stock.stock_code}</td>
+                        <td class="stock-name">${stock.stock_name}</td>
+                        <td class="price-up">¥${stock.current_price.toFixed(2)}</td>
+                        <td class="price-up">${stock.change_percent.toFixed(2)}%</td>
+                        <td>${stock.distance_to_limit}%</td>
+                        <td>${(stock.amount / 10000).toFixed(0)}</td>
+                        <td>${stock.turnover_rate.toFixed(2)}%</td>
+                        <td>${stock.volume_ratio.toFixed(2)}</td>
+                        <td class="stars">${stars} ${stock.strength.toFixed(0)}%</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            document.getElementById('strongTable').innerHTML = html;
+        }
+        
+        // 显示市场情绪数据
+        function displaySentimentData(data) {
+            const sentimentClass = data.sentiment_score >= 60 ? 'sentiment-bullish' : 
+                                  data.sentiment_score >= 40 ? 'sentiment-neutral' : 'sentiment-bearish';
+            
+            let html = `
+                <div style="padding: 20px;">
+                    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 30px;">
+                        <div class="sentiment-indicator ${sentimentClass}">
+                            ${data.sentiment_level}
+                        </div>
+                        <div style="font-size: 36px; font-weight: bold; color: #ff4444;">
+                            ${data.sentiment_score.toFixed(1)}分
+                        </div>
+                        <div style="color: #999;">
+                            ${data.suggestion}
+                        </div>
+                    </div>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-label">总股票数</div>
+                            <div class="stat-value">${data.statistics['总股票数']}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">上涨家数</div>
+                            <div class="stat-value" style="color: #ff4444;">${data.statistics['上涨家数']}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">下跌家数</div>
+                            <div class="stat-value" style="color: #22c55e;">${data.statistics['下跌家数']}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">涨停家数</div>
+                            <div class="stat-value" style="color: #ff4444;">${data.statistics['涨停家数']}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">跌停家数</div>
+                            <div class="stat-value" style="color: #22c55e;">${data.statistics['跌停家数']}</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">涨跌比</div>
+                            <div class="stat-value">${data.market_breadth['涨跌比']}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('sentimentTable').innerHTML = html;
+        }
+        
+        // 刷新数据
+        function refreshData() {
+            if (currentTab === 'limitUp') {
+                loadLimitUpData();
+            } else if (currentTab === 'strong') {
+                loadStrongStocks();
+            } else if (currentTab === 'sentiment') {
+                loadMarketSentiment();
+            }
+            
+            // 更新时间
+            const now = new Date();
+            document.getElementById('updateTime').textContent = 
+                `更新时间: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        }
+        
+        // 初始化
+        window.onload = function() {
+            loadLimitUpData();
+            
+            // 自动刷新（每15秒）
+            autoRefreshInterval = setInterval(refreshData, 15000);
+        };
+        
+        // 清理
+        window.onbeforeunload = function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        };
+    </script>
+</body>
+</html>

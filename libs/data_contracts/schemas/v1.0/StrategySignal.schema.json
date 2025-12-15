@@ -1,0 +1,68 @@
+{
+  "description": "Normalized strategy output.",
+  "properties": {
+    "confidence": {
+      "description": "置信度",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "metadata": {
+      "description": "附加元数据",
+      "title": "Metadata",
+      "type": "object"
+    },
+    "reasons": {
+      "description": "触发原因列表",
+      "items": {
+        "type": "string"
+      },
+      "title": "Reasons",
+      "type": "array"
+    },
+    "signal_type": {
+      "description": "信号类型",
+      "title": "Signal Type",
+      "type": "string"
+    },
+    "strategy": {
+      "description": "策略名称或标识",
+      "title": "Strategy",
+      "type": "string"
+    },
+    "strength_score": {
+      "description": "强度评分",
+      "minimum": 0.0,
+      "title": "Strength Score",
+      "type": "number"
+    },
+    "symbol": {
+      "description": "证券代码",
+      "title": "Symbol",
+      "type": "string"
+    },
+    "triggered_at": {
+      "description": "信号触发时间",
+      "format": "date-time",
+      "title": "Triggered At",
+      "type": "string"
+    },
+    "window": {
+      "description": "对应的特征窗口标识",
+      "title": "Window",
+      "type": "string"
+    }
+  },
+  "required": [
+    "strategy",
+    "symbol",
+    "signal_type",
+    "confidence",
+    "strength_score",
+    "triggered_at",
+    "window"
+  ],
+  "title": "StrategySignal",
+  "type": "object"
+}

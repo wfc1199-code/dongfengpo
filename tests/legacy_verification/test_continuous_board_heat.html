@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连板板块热度分析</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .sectors-container {
+            display: grid;
+            gap: 15px;
+        }
+        .sector-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .sector-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .sector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .sector-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        .rank-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .strength-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+        .strength-极强 {
+            background: #fff0f0;
+            color: #ff4d4f;
+        }
+        .strength-强 {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+        .strength-中 {
+            background: #f0f5ff;
+            color: #1890ff;
+        }
+        .sector-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .metric-box {
+            text-align: center;
+            padding: 12px;
+            background: #fafafa;
+            border-radius: 6px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1890ff;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .leader-info {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .leader-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        .leader-stock {
+            font-size: 16px;
+            font-weight: bold;
+            color: #1a1a1a;
+        }
+        .leader-badge {
+            background: #ff4d4f;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        .heat-score {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff4d4f;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 连板板块热度分析</h1>
+        <p style="color: #666; margin-top: 10px;">基于涨停池连板数据的智能板块热度分析</p>
+        <div class="stats-grid" id="statsGrid">
+            <!-- 统计数据将在这里动态加载 -->
+        </div>
+    </div>
+
+    <div class="sectors-container" id="sectorsContainer"></div>
+
+    <script>
+        async function fetchData() {
+            try {
+                console.log('🔄 开始获取连板热度数据...');
+                const response = await fetch('http://localhost:9000/api/market-scanner/continuous-board-heat?limit=15');
+                const data = await response.json();
+
+                console.log('📊 API返回数据:', data);
+
+                if (data.code === 200 && data.data) {
+                    const { sectors, statistics } = data.data;
+                    console.log(`✅ 获取到 ${sectors.length} 个板块`);
+
+                    // 显示统计数据
+                    const statsGrid = document.getElementById('statsGrid');
+                    statsGrid.innerHTML = `
+                        <div class="stat-card">
+                            <div class="stat-label">板块总数</div>
+                            <div class="stat-value">${statistics.total_sectors}</div>
+                        </div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <div class="stat-label">涨停股总数</div>
+                            <div class="stat-value">${statistics.total_stocks}</div>
+                        </div>
+                        <div class="stat-card" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                            <div class="stat-label">平均热度</div>
+                            <div class="stat-value">${statistics.avg_heat_score}</div>
+                        </div>
+                    `;
+
+                    // 显示板块列表
+                    const container = document.getElementById('sectorsContainer');
+                    container.innerHTML = sectors.map(sector => `
+                        <div class="sector-card">
+                            <div class="sector-header">
+                                <div>
+                                    <span class="sector-name">${sector.sector_name}</span>
+                                    <span class="strength-badge strength-${sector.strength}">${sector.strength}</span>
+                                </div>
+                                <div class="rank-badge">#${sector.rank}</div>
+                            </div>
+
+                            <div class="sector-metrics">
+                                <div class="metric-box">
+                                    <div class="metric-value" style="color: #ff4d4f;">${sector.heat_score}</div>
+                                    <div class="metric-label">热度评分</div>
+                                </div>
+                                <div class="metric-box">
+                                    <div class="metric-value">${sector.stock_count}</div>
+                                    <div class="metric-label">涨停股数</div>
+                                </div>
+                                <div class="metric-box">
+                                    <div class="metric-value" style="color: #52c41a;">${sector.avg_consecutive_days}</div>
+                                    <div class="metric-label">平均连板数</div>
+                                </div>
+                                <div class="metric-box">
+                                    <div class="metric-value" style="color: #fa8c16;">${sector.max_consecutive_days}板</div>
+                                    <div class="metric-label">最高连板</div>
+                                </div>
+                                <div class="metric-box">
+                                    <div class="metric-value" style="color: #1890ff;">+${sector.avg_change}%</div>
+                                    <div class="metric-label">平均涨幅</div>
+                                </div>
+                                <div class="metric-box">
+                                    <div class="metric-value">${(sector.total_amount / 100000000).toFixed(1)}亿</div>
+                                    <div class="metric-label">成交总额</div>
+                                </div>
+                            </div>
+
+                            ${sector.leading_stock ? `
+                                <div class="leader-info">
+                                    <div class="leader-title">👑 板块龙头</div>
+                                    <div class="leader-stock">
+                                        ${sector.leading_stock}
+                                        <span class="leader-badge">${sector.leading_stock_consecutive}连板</span>
+                                        <span style="margin-left: 10px; color: #ff4d4f;">+${sector.leading_stock_change.toFixed(2)}%</span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('');
+
+                    console.log('✅ 页面渲染完成');
+                } else {
+                    document.getElementById('sectorsContainer').innerHTML =
+                        '<div class="loading">暂无数据</div>';
+                }
+            } catch (error) {
+                console.error('❌ 获取数据失败:', error);
+                document.getElementById('sectorsContainer').innerHTML =
+                    '<div class="loading">数据加载失败</div>';
+            }
+        }
+
+        // 初始加载
+        fetchData();
+
+        // 每30秒刷新
+        setInterval(fetchData, 30000);
+    </script>
+</body>
+</html>

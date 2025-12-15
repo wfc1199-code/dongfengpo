@@ -1,0 +1,36 @@
+{
+  "system": {
+    "name": "东风破 - AI异动拉升检测系统",
+    "version": "1.1.0-optimized",
+    "environment": "production",
+    "debug_mode": false
+  },
+  "performance": {
+    "frontend": {
+      "default_refresh_interval": 20000,
+      "available_intervals": [5000, 10000, 15000, 20000, 30000, 60000],
+      "websocket_reconnect_delay": 3000,
+      "max_reconnect_attempts": 5,
+      "chart_animation": false,
+      "lazy_loading": true
+    },
+    "backend": {
+      "realtime_monitoring_interval": 5000,
+      "sector_update_interval": 900000,
+      "api_request_timeout": 8000,
+      "max_concurrent_requests": 5,
+      "cache_ttl": 60000
+    },
+    "database": {
+      "connection_pool_size": 10,
+      "query_timeout": 5000,
+      "batch_size": 100
+    }
+  },
+  "limits": {
+    "max_monitoring_stocks": 200,
+    "max_anomaly_alerts": 50,
+    "max_websocket_clients": 100,
+    "api_rate_limit": 100
+  }
+}

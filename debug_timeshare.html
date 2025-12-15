@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>分时图调试 - 002864</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            background: #1a1a1a; 
+            color: #fff;
+        }
+        #chart { 
+            width: 100%; 
+            height: 600px; 
+            background: #1a1a1a;
+        }
+        .info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+        .success { color: #4CAF50; }
+        .error { color: #f44336; }
+        .warning { color: #FF9800; }
+    </style>
+</head>
+<body>
+    <h1>002864 盘龙药业 - 分时图Y轴调试</h1>
+    
+    <div class="info" id="info"></div>
+    
+    <div id="chart"></div>
+
+    <script>
+        // 模拟数据
+        const stockCode = '002864';
+        const yesterdayClose = 32.50;
+        const currentPrice = 32.96;
+        
+        // 判断涨跌停
+        const pureCode = stockCode.replace(/^(sh|sz|hk)/, '');
+        let limitPercent = 0.1;
+        let boardType = '主板';
+        
+        if (pureCode.startsWith('688') || pureCode.startsWith('689')) {
+            limitPercent = 0.2;
+            boardType = '科创板';
+        } else if (pureCode.startsWith('300')) {
+            limitPercent = 0.2;
+            boardType = '创业板';
+        }
+        
+        // 计算Y轴范围 - 使用最新的修复方法
+        const priceRange = yesterdayClose * limitPercent;
+        const yAxisMax = yesterdayClose + priceRange;
+        const yAxisMin = yesterdayClose - priceRange;
+        
+        // 验证对称性
+        const upperRange = yAxisMax - yesterdayClose;
+        const lowerRange = yesterdayClose - yAxisMin;
+        const isSymmetric = Math.abs(upperRange - lowerRange) < 0.01;
+        
+        // 显示计算结果
+        document.getElementById('info').innerHTML = `
+            <h3>计算结果:</h3>
+            <div>股票代码: ${stockCode} (${boardType})</div>
+            <div>昨收价: ${yesterdayClose.toFixed(2)}</div>
+            <div>当前价: ${currentPrice.toFixed(2)}</div>
+            <div>涨跌幅限制: ${(limitPercent * 100).toFixed(0)}%</div>
+            <hr>
+            <div>价格范围: ${priceRange.toFixed(2)}</div>
+            <div>Y轴最大值: ${yAxisMax.toFixed(2)} (涨停价)</div>
+            <div>Y轴最小值: ${yAxisMin.toFixed(2)} (跌停价)</div>
+            <div>昨收价位置: ${yesterdayClose.toFixed(2)} (0轴)</div>
+            <hr>
+            <div>上方空间: ${upperRange.toFixed(2)}</div>
+            <div>下方空间: ${lowerRange.toFixed(2)}</div>
+            <div class="${isSymmetric ? 'success' : 'error'}">
+                对称性: ${isSymmetric ? '✓ 完美对称' : '✗ 不对称'}
+            </div>
+            <hr>
+            <div class="warning">
+                <strong>预期效果:</strong><br>
+                - 黄色虚线（0轴）应该在图表正中间<br>
+                - 左侧刻度应该显示: -10%, -5%, 0%, +5%, +10%<br>
+                - 上下空间应该完全相等
+            </div>
+        `;
+        
+        // 生成模拟分时数据（9:30-15:00）
+        const generateTimeShareData = () => {
+            const times = [];
+            const prices = [];
+            
+            // 上午 9:30-11:30
+            for (let h = 9; h <= 11; h++) {
+                const startMin = (h === 9) ? 30 : 0;
+                const endMin = (h === 11) ? 31 : 60;
+                for (let m = startMin; m < endMin; m++) {
+                    const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    times.push(time);
+                    // 模拟价格波动
+                    const random = Math.random() * 0.5 - 0.25;
+                    prices.push(yesterdayClose + random);
+                }
+            }
+            
+            // 下午 13:00-15:00
+            for (let h = 13; h <= 15; h++) {
+                const endMin = (h === 15) ? 1 : 60;
+                for (let m = 0; m < endMin; m++) {
+                    const time = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                    times.push(time);
+                    const random = Math.random() * 0.5 - 0.25;
+                    prices.push(yesterdayClose + random + 0.5);
+                }
+            }
+            
+            return { times, prices };
+        };
+        
+        const { times, prices } = generateTimeShareData();
+        
+        // 创建ECharts图表
+        const chart = echarts.init(document.getElementById('chart'));
+        
+        const option = {
+            backgroundColor: '#1a1a1a',
+            tooltip: {
+                trigger: 'axis',
+                backgroundColor: 'rgba(50, 50, 50, 0.9)',
+                textStyle: { color: '#fff' }
+            },
+            grid: {
+                left: 70,
+                right: 90,
+                top: '5%',
+                height: '80%'
+            },
+            xAxis: {
+                type: 'category',
+                data: times,
+                boundaryGap: false,
+                axisLine: { lineStyle: { color: '#333' } },
+                axisLabel: {
+                    color: '#999',
+                    interval: (index) => {
+                        const time = times[index];
+                        return ['09:30', '10:30', '11:30', '13:00', '14:00', '15:00'].includes(time);
+                    }
+                },
+                splitLine: { 
+                    show: true, 
+                    lineStyle: { color: '#333', type: 'dashed' } 
+                }
+            },
+            yAxis: [
+                // 右侧Y轴 - 价格
+                {
+                    type: 'value',
+                    position: 'right',
+                    min: yAxisMin,
+                    max: yAxisMax,
+                    splitNumber: 4,
+                    axisLabel: {
+                        formatter: (value) => value.toFixed(2),
+                        color: '#999'
+                    },
+                    splitLine: { 
+                        show: true, 
+                        lineStyle: { color: '#333', type: 'dashed' } 
+                    }
+                },
+                // 左侧Y轴 - 百分比
+                {
+                    type: 'value',
+                    position: 'left',
+                    min: yAxisMin,
+                    max: yAxisMax,
+                    axisLabel: {
+                        formatter: (value) => {
+                            const percent = ((value - yesterdayClose) / yesterdayClose) * 100;
+                            return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
+                        },
+                        color: '#999'
+                    },
+                    splitLine: { show: false }
+                }
+            ],
+            series: [
+                // 分时线
+                {
+                    name: '分时价',
+                    type: 'line',
+                    data: prices,
+                    symbol: 'none',
+                    lineStyle: { color: '#FF6B6B', width: 2 },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(255, 107, 107, 0.3)' },
+                                { offset: 1, color: 'rgba(255, 107, 107, 0.05)' }
+                            ]
+                        }
+                    }
+                },
+                // 0轴线（昨收价）
+                {
+                    name: '昨收',
+                    type: 'line',
+                    data: new Array(times.length).fill(yesterdayClose),
+                    symbol: 'none',
+                    lineStyle: { 
+                        color: '#FFD700', 
+                        type: 'dashed', 
+                        width: 2 
+                    },
+                    markLine: {
+                        symbol: 'none',
+                        label: {
+                            show: true,
+                            position: 'end',
+                            formatter: `0轴 ${yesterdayClose.toFixed(2)}`,
+                            color: '#FFD700',
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        },
+                        lineStyle: {
+                            color: '#FFD700',
+                            type: 'dashed',
+                            width: 2
+                        },
+                        data: [{ yAxis: yesterdayClose }]
+                    }
+                }
+            ]
+        };
+        
+        chart.setOption(option);
+        
+        // 自适应窗口大小
+        window.addEventListener('resize', () => {
+            chart.resize();
+        });
+        
+        console.log('=== 分时图Y轴调试信息 ===');
+        console.log('股票代码:', stockCode);
+        console.log('板块类型:', boardType);
+        console.log('昨收价:', yesterdayClose);
+        console.log('涨跌幅限制:', (limitPercent * 100) + '%');
+        console.log('Y轴范围:', [yAxisMin, yAxisMax]);
+        console.log('上方空间:', upperRange);
+        console.log('下方空间:', lowerRange);
+        console.log('对称性:', isSymmetric ? '✓' : '✗');
+    </script>
+</body>
+</html>

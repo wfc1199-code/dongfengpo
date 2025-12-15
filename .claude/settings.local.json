@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m py_compile backend/real_option_data_fetcher.py)",
+      "Bash(python3 test_code_conversion.py)",
+      "Bash(python3 test_mo2511_minute_data.py)",
+      "Bash(python3 test_mo_code_format.py)",
+      "Bash(python3 backup_akshare_fix.py)",
+      "Bash(python3 -m py_compile backend/services/akshare_mo1000_fetcher.py)",
+      "Bash(python3 test_mo2511_real_data.py)",
+      "Bash(python3 debug_akshare_connection.py)",
+      "Bash(python3 backend/services/sina_minute_fetcher.py)",
+      "Bash(python3 test_realistic_minute_data.py)",
+      "Bash(python3 test_option_minute_api.py)",
+      "Bash(python test_time_distribution_fix.py)",
+      "Bash(python akshare_mo1000_fetcher_fixed.py)",
+      "Bash(python test_final_time_fix.py)",
+      "Bash(python backend/test_final_time_fix.py)",
+      "Bash(python services/akshare_mo1000_fetcher_fixed.py)",
+      "Bash(python debug_minute_data.py)",
+      "Bash(python ../debug_minute_data.py)",
+      "Bash(python test_minute_api_integration.py)",
+      "Bash(curl -s \"http://localhost:9000/api/options/MO1000-C-7500/minute\")",
+      "Bash(curl -s \"http://localhost:9000/api/options/MO2511-C-7500/minute\")",
+      "Bash(python test_correct_option_code.py)",
+      "Bash(python services/trading_day_helper.py)",
+      "Bash(python test_final_minute_fix.py)",
+      "Bash(python ../test_final_minute_fix.py)",
+      "Bash(python backend/test_final_minute_fix.py)",
+      "Bash(python backend/test_minute_fix_summary.py)",
+      "Bash(python test_minute_fix_summary.py)",
+      "Bash(python backend/services/akshare_mo1000_fetcher.py)",
+      "Bash(python trading_day_helper.py)"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "acceptEdits"
+  }
+}

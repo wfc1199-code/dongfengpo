@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>前端网关模式验证测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 0;
+        }
+        .result {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        .info {
+            background: #d5e8f7;
+            padding: 15px;
+            border-left: 4px solid #3498db;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 前端网关模式验证测试</h1>
+
+    <div class="info">
+        <strong>测试目标:</strong> 验证前端通过API网关(8080)访问Legacy和新微服务
+        <br><strong>配置:</strong> REACT_APP_USE_API_GATEWAY=true
+        <br><strong>网关地址:</strong> http://localhost:8080
+    </div>
+
+    <div class="test-section">
+        <h2>1. 配置验证</h2>
+        <button onclick="testConfig()">检查配置</button>
+        <div id="config-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. 网关健康检查</h2>
+        <button onclick="testGatewayHealth()">测试网关</button>
+        <div id="gateway-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Legacy API (通过网关)</h2>
+        <button onclick="testLegacyStock()">测试股票行情</button>
+        <button onclick="testLegacyHealth()">测试健康检查</button>
+        <div id="legacy-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. 新微服务 API (通过网关)</h2>
+        <button onclick="testSignalApi()">测试signal-api</button>
+        <button onclick="testOpportunities()">测试机会数据</button>
+        <div id="signal-result" class="result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. 完整流程测试</h2>
+        <button onclick="runAllTests()">运行全部测试</button>
+        <div id="all-result" class="result"></div>
+    </div>
+
+    <script>
+        // 配置
+        const GATEWAY_URL = 'http://localhost:8080';
+        const USE_GATEWAY = true;
+
+        function log(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = isError ? 'error' : 'success';
+            element.innerHTML += `[${timestamp}] <span class="${className}">${message}</span>\n`;
+        }
+
+        function clearLog(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        // 1. 配置验证
+        async function testConfig() {
+            clearLog('config-result');
+            log('config-result', '✅ USE_GATEWAY = ' + USE_GATEWAY);
+            log('config-result', '✅ GATEWAY_URL = ' + GATEWAY_URL);
+            log('config-result', '✅ Legacy访问路径: ' + GATEWAY_URL + '/api/*');
+            log('config-result', '✅ 新服务路径: ' + GATEWAY_URL + '/opportunities');
+        }
+
+        // 2. 网关健康检查
+        async function testGatewayHealth() {
+            clearLog('gateway-result');
+            log('gateway-result', '🔍 检查网关健康状态...');
+
+            try {
+                const response = await fetch(`${GATEWAY_URL}/gateway/health`);
+                const data = await response.json();
+
+                log('gateway-result', '✅ 网关响应成功');
+                log('gateway-result', '状态: ' + data.status);
+                log('gateway-result', '\n服务状态:');
+
+                for (const [service, status] of Object.entries(data.services)) {
+                    const icon = status.status === 'healthy' ? '✅' : '⚠️';
+                    log('gateway-result', `  ${icon} ${service}: ${status.status}`);
+                }
+            } catch (error) {
+                log('gateway-result', '❌ 网关连接失败: ' + error.message, true);
+            }
+        }
+
+        // 3. Legacy API测试
+        async function testLegacyStock() {
+            clearLog('legacy-result');
+            log('legacy-result', '🔍 测试Legacy股票API(通过网关)...');
+
+            try {
+                const url = `${GATEWAY_URL}/api/stocks/000001/realtime`;
+                log('legacy-result', '请求: ' + url);
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.data) {
+                    log('legacy-result', '✅ 获取股票数据成功');
+                    log('legacy-result', `股票: ${data.data.name} (${data.data.code})`);
+                    log('legacy-result', `价格: ${data.data.current_price}`);
+                    log('legacy-result', `涨幅: ${data.data.change_percent}%`);
+                    log('legacy-result', '\n✅ Legacy API通过网关正常工作!');
+                } else {
+                    log('legacy-result', '⚠️ 响应格式异常', true);
+                }
+            } catch (error) {
+                log('legacy-result', '❌ 请求失败: ' + error.message, true);
+            }
+        }
+
+        async function testLegacyHealth() {
+            clearLog('legacy-result');
+            log('legacy-result', '🔍 测试Legacy健康检查(通过网关)...');
+
+            try {
+                const url = `${GATEWAY_URL}/api/health`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                log('legacy-result', '✅ Legacy健康检查通过');
+                log('legacy-result', '状态: ' + data.status);
+                log('legacy-result', '版本: ' + data.version);
+            } catch (error) {
+                log('legacy-result', '❌ 请求失败: ' + error.message, true);
+            }
+        }
+
+        // 4. 新微服务测试
+        async function testSignalApi() {
+            clearLog('signal-result');
+            log('signal-result', '🔍 测试signal-api健康检查(通过网关)...');
+
+            try {
+                const url = `${GATEWAY_URL}/health`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                log('signal-result', '✅ signal-api响应成功');
+                log('signal-result', JSON.stringify(data, null, 2));
+            } catch (error) {
+                log('signal-result', '❌ 请求失败: ' + error.message, true);
+            }
+        }
+
+        async function testOpportunities() {
+            clearLog('signal-result');
+            log('signal-result', '🔍 测试机会数据API(通过网关)...');
+
+            try {
+                const url = `${GATEWAY_URL}/opportunities`;
+                log('signal-result', '请求: ' + url);
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (Array.isArray(data)) {
+                    log('signal-result', `✅ 获取到 ${data.length} 条机会数据`);
+
+                    if (data.length > 0) {
+                        const opp = data[0];
+                        log('signal-result', '\n第一条机会:');
+                        log('signal-result', `  ID: ${opp.id}`);
+                        log('signal-result', `  股票: ${opp.symbol}`);
+                        log('signal-result', `  状态: ${opp.state}`);
+                        log('signal-result', `  置信度: ${opp.confidence}`);
+                    }
+
+                    log('signal-result', '\n✅ 新微服务通过网关正常工作!');
+                } else {
+                    log('signal-result', '响应: ' + JSON.stringify(data, null, 2));
+                }
+            } catch (error) {
+                log('signal-result', '❌ 请求失败: ' + error.message, true);
+            }
+        }
+
+        // 5. 运行全部测试
+        async function runAllTests() {
+            clearLog('all-result');
+            log('all-result', '🚀 开始完整验证流程...\n');
+
+            const tests = [
+                { name: '配置验证', fn: testConfig },
+                { name: '网关健康检查', fn: testGatewayHealth },
+                { name: 'Legacy股票API', fn: testLegacyStock },
+                { name: 'Legacy健康检查', fn: testLegacyHealth },
+                { name: 'signal-api', fn: testSignalApi },
+                { name: '机会数据API', fn: testOpportunities }
+            ];
+
+            for (const test of tests) {
+                log('all-result', `\n📝 执行: ${test.name}`);
+                try {
+                    await test.fn();
+                    log('all-result', `✅ ${test.name} - 通过`);
+                } catch (error) {
+                    log('all-result', `❌ ${test.name} - 失败: ${error.message}`, true);
+                }
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+
+            log('all-result', '\n\n🎉 全部测试完成!');
+        }
+
+        // 页面加载时显示配置
+        window.onload = function() {
+            testConfig();
+        };
+    </script>
+</body>
+</html>

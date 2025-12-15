@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>直接测试前端timeshare</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>直接测试前端timeshare函数</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        // 模拟前端代码
+        const LEGACY_API_BASE_URL = 'http://localhost:9000';
+        const PIPELINE_API_BASE_URL = 'http://localhost:9000';
+
+        function getLegacyApiUrl(path) {
+            return `${LEGACY_API_BASE_URL}${path}`;
+        }
+
+        function getPipelineApiUrl(path) {
+            return `${PIPELINE_API_BASE_URL}${path}`;
+        }
+
+        function isOptionCode(symbol) {
+            return symbol.includes('-') &&
+                   (symbol.includes('-C-') || symbol.includes('-P-')) &&
+                   /^\d+$/.test(symbol.split('-')[0]);
+        }
+
+        const normalizeLegacyResponse = (symbol, raw) => {
+            console.log('normalizeLegacyResponse called with:', { symbol, raw });
+
+            if (!raw) {
+                console.log('raw is null');
+                return null;
+            }
+
+            const optionMode = isOptionCode(symbol);
+            console.log('optionMode:', optionMode);
+
+            const candidatePoints = optionMode
+                ? Array.isArray(raw.data) ? raw.data : []
+                : Array.isArray(raw.minute_data)
+                    ? raw.minute_data
+                    : Array.isArray(raw.timeshare_data)
+                        ? raw.timeshare_data
+                        : Array.isArray(raw.data)
+                            ? raw.data
+                            : [];
+
+            console.log('candidatePoints:', candidatePoints);
+            console.log('candidatePoints.length:', candidatePoints.length);
+
+            if (!Array.isArray(candidatePoints) || candidatePoints.length === 0) {
+                console.log('No valid data points found');
+                return null;
+            }
+
+            // 期权数据可能在info字段中
+            const infoData = raw.info || {};
+            const metaSource = optionMode ? (raw.info || raw) : raw;
+            const yesterdayClose = Number(metaSource.yesterday_close || metaSource.preClose || infoData.yesterday_close || 0);
+
+            const points = candidatePoints.map(item => ({
+                timestamp: item.time || '09:30',
+                price: Number(item.price) || 0,
+                volume: Number(item.volume) || 0,
+                amount: Number(item.amount) || 0,
+                avgPrice: Number(item.avgPrice || item.price) || 0,
+                changePercent: 0
+            }));
+
+            console.log('Normalized points:', points);
+
+            return {
+                status: 'ok',
+                symbol,
+                points,
+                meta: {
+                    yesterdayClose,
+                    isOption: optionMode
+                }
+            };
+        };
+
+        const fetchJson = async (url, options) => {
+            console.log('Fetching:', url);
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        };
+
+        const fetchTimeshare = async (symbol, options) => {
+            console.log('fetchTimeshare called with:', symbol);
+
+            const pipelineUrl = getPipelineApiUrl(`/market-data/timeshare/${encodeURIComponent(symbol)}`);
+            const legacyBaseUrl = getLegacyApiUrl('');
+            const shouldSkipPipeline = pipelineUrl.startsWith(legacyBaseUrl);
+
+            console.log('Pipeline URL:', pipelineUrl);
+            console.log('Should skip pipeline:', shouldSkipPipeline);
+
+            if (!shouldSkipPipeline) {
+                try {
+                    const pipelineData = await fetchJson(pipelineUrl, options);
+                    console.log('Pipeline data:', pipelineData);
+                    // 这里跳过Pipeline处理
+                } catch (error) {
+                    console.log('Pipeline failed:', error);
+                }
+            }
+
+            const legacyEndpoint = isOptionCode(symbol)
+                ? `/api/options/${symbol}/minute`
+                : `/api/stocks/${symbol}/timeshare`;
+            const legacyUrl = getLegacyApiUrl(legacyEndpoint) + `?_t=${Date.now()}`;
+
+            console.log('Legacy URL:', legacyUrl);
+
+            const legacyData = await fetchJson(legacyUrl, options);
+            console.log('Legacy data:', legacyData);
+
+            const normalizedLegacy = normalizeLegacyResponse(symbol, legacyData);
+            console.log('Normalized legacy:', normalizedLegacy);
+
+            if (normalizedLegacy && normalizedLegacy.points.length > 0) {
+                return normalizedLegacy;
+            }
+
+            throw new Error('暂无分时数据');
+        };
+
+        // 测试
+        const output = document.getElementById('output');
+        output.innerHTML = '<h3>开始测试...</h3>';
+
+        try {
+            const result = await fetchTimeshare('MO2511-C-7400');
+            output.innerHTML = `<h2 style="color: green">✅ 成功！</h2>`;
+            output.innerHTML += `<p>数据点数: ${result.points.length}</p>`;
+            output.innerHTML += `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+        } catch (error) {
+            output.innerHTML = `<h2 style="color: red">❌ 失败</h2>`;
+            output.innerHTML += `<p>错误: ${error.message}</p>`;
+            output.innerHTML += `<p>请查看浏览器控制台获取详细信息</p>`;
+        }
+    </script>
+</body>
+</html>

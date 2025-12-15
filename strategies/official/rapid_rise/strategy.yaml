@@ -1,0 +1,44 @@
+name: rapid_rise
+version: 1.2.0
+author: dongfengpo_team
+description: 快速拉升异动检测策略 - 基于价格涨幅和成交量放大
+
+dependencies:
+  - price_change_rate    # 价格变化率
+  - volume_ratio         # 量比
+  - money_flow_5min      # 5分钟资金流
+  - turnover_rate        # 换手率
+
+parameters:
+  price_threshold: 0.03       # 涨幅阈值3%
+  volume_threshold: 2.0       # 量比阈值2倍
+  money_flow_threshold: 5000000  # 资金流阈值500万
+  time_window: 300            # 时间窗口5分钟
+  confidence_base: 0.7        # 基础置信度
+
+risk_controls:
+  max_signals_per_minute: 10
+  min_confidence: 0.6
+  blacklist_sectors:
+    - "ST股"
+    - "退市股"
+    - "*ST"
+  max_price: 100              # 最高股价限制
+  min_volume: 1000000         # 最小成交量
+
+backtest:
+  start_date: "2024-01-01"
+  end_date: "2024-12-31"
+  initial_capital: 1000000
+  metrics:
+    total_return: 0.385       # 总收益38.5%
+    sharpe_ratio: 1.85        # 夏普比率
+    win_rate: 0.68            # 胜率68%
+    max_drawdown: 0.12        # 最大回撤12%
+    avg_holding_days: 2.3     # 平均持仓天数
+    total_trades: 156         # 总交易次数
+
+performance:
+  cpu_usage: "low"
+  memory_usage: "5MB"
+  avg_latency_ms: 12

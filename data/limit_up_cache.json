@@ -1,0 +1,32 @@
+{
+  "today_predictions": {
+    "stocks": [
+      {
+        "code": "002683",
+        "name": "广东宏大",
+        "sealTime": "09:45",
+        "amount": 486791,
+        "volume": 1523731372.88,
+        "predictionScore": 95,
+        "strength": 4,
+        "changePercent": 9.4,
+        "turnoverRate": 10.05,
+        "predictionLevel": "极高",
+        "predictionReasons": [
+          "强势拉升",
+          "巨量突破",
+          "热点题材"
+        ]
+      }
+    ],
+    "statistics": {
+      "total": 1,
+      "highProbability": 1,
+      "mediumProbability": 0,
+      "lowProbability": 0,
+      "avgScore": 95.0
+    },
+    "updateTime": "2025-09-18T07:55:46.636935",
+    "dataSource": "real"
+  }
+}

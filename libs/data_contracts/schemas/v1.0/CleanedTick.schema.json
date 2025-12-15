@@ -1,0 +1,148 @@
+{
+  "description": "Tick record after cleaner normalization.",
+  "example": {
+    "ask_price": 12.34,
+    "ask_volume": 600,
+    "bid_price": 12.33,
+    "bid_volume": 800,
+    "ingested_at": "2024-03-08T09:35:05.100+08:00",
+    "price": 12.34,
+    "raw": {
+      "v": "stub"
+    },
+    "source": "tencent",
+    "symbol": "sh600000",
+    "timestamp": "2024-03-08T09:35:05.000+08:00",
+    "turnover": 14808.0,
+    "volume": 1200
+  },
+  "properties": {
+    "ask_price": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "卖一价",
+      "title": "Ask Price"
+    },
+    "ask_volume": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "卖一量",
+      "title": "Ask Volume"
+    },
+    "bid_price": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "买一价",
+      "title": "Bid Price"
+    },
+    "bid_volume": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "买一量",
+      "title": "Bid Volume"
+    },
+    "cleaned_at": {
+      "description": "清洗完成时间",
+      "format": "date-time",
+      "title": "Cleaned At",
+      "type": "string"
+    },
+    "ingested_at": {
+      "description": "数据写入时间",
+      "format": "date-time",
+      "title": "Ingested At",
+      "type": "string"
+    },
+    "price": {
+      "description": "最新成交价",
+      "minimum": 0.0,
+      "title": "Price",
+      "type": "number"
+    },
+    "quality_flags": {
+      "description": "质量标记",
+      "items": {
+        "type": "string"
+      },
+      "title": "Quality Flags",
+      "type": "array"
+    },
+    "raw": {
+      "description": "原始字段备份",
+      "title": "Raw",
+      "type": "object"
+    },
+    "source": {
+      "description": "数据来源适配器标识",
+      "title": "Source",
+      "type": "string"
+    },
+    "symbol": {
+      "description": "证券代码，含市场标识",
+      "title": "Symbol",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "行情时间",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "turnover": {
+      "description": "成交额",
+      "minimum": 0.0,
+      "title": "Turnover",
+      "type": "number"
+    },
+    "volume": {
+      "description": "成交量（手）",
+      "minimum": 0,
+      "title": "Volume",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "source",
+    "symbol",
+    "price",
+    "volume",
+    "turnover",
+    "timestamp",
+    "ingested_at",
+    "cleaned_at"
+  ],
+  "title": "CleanedTick",
+  "type": "object"
+}

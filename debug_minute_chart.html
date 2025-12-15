@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期权分时图调试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+        }
+        .chart-container {
+            width: 100%;
+            height: 400px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .controls label, .controls select, .controls button, .controls input {
+            margin-right: 10px;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+        }
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+        }
+        button:hover { opacity: 0.8; }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .data-analysis {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .analysis-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .analysis-card h4 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .price-sample {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .price-item {
+            background: white;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            text-align: center;
+            font-size: 12px;
+        }
+        .price-time {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .price-value {
+            color: #28a745;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 期权分时图深度调试</h1>
+
+        <div class="section">
+            <h3>API调用控制</h3>
+            <div class="controls">
+                <label>期权代码:</label>
+                <input type="text" id="optionCode" value="MO1000-C-7500" placeholder="输入期权代码">
+                <button onclick="loadAndDebugData()">🔍 获取并调试数据</button>
+                <button onclick="clearAll()">🗑️ 清空所有</button>
+            </div>
+            <div id="status" class="status info">等待获取数据...</div>
+        </div>
+
+        <div class="section">
+            <h3>📊 分时图显示</h3>
+            <div id="minuteChart" class="chart-container"></div>
+        </div>
+
+        <div class="section">
+            <h3>📋 原始数据分析</h3>
+            <div class="data-analysis">
+                <div class="analysis-card">
+                    <h4>基本信息</h4>
+                    <div id="basicInfo">无数据</div>
+                </div>
+                <div class="analysis-card">
+                    <h4>时间分布</h4>
+                    <div id="timeDistribution">无数据</div>
+                </div>
+                <div class="analysis-card">
+                    <h4>价格统计</h4>
+                    <div id="priceStats">无数据</div>
+                </div>
+                <div class="analysis-card">
+                    <h4>成交量统计</h4>
+                    <div id="volumeStats">无数据</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>💰 价格样本数据</h3>
+            <div id="priceSample" class="price-sample">无数据</div>
+        </div>
+
+        <div class="section">
+            <h3>🔧 API原始响应</h3>
+            <pre id="rawResponse">等待API调用...</pre>
+        </div>
+
+        <div class="section">
+            <h3>⚠️ 分时图问题诊断</h3>
+            <div id="diagnostics" class="status info">等待诊断...</div>
+            <ul id="issuesList">
+                <li>等待数据加载...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9000/api/options';
+        let chart = null;
+
+        // 初始化图表
+        function initChart() {
+            chart = echarts.init(document.getElementById('minuteChart'));
+            chart.setOption({
+                title: {
+                    text: '期权分时图 - 调试模式',
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    formatter: function(params) {
+                        const time = params[0].axisValue;
+                        const price = params[0].data;
+                        const volume = params[1] ? params[1].data : 0;
+                        return `时间: ${time}<br/>价格: ${price}<br/>成交量: ${volume}`;
+                    }
+                },
+                legend: {
+                    data: ['价格', '成交量'],
+                    top: 30
+                },
+                xAxis: {
+                    type: 'category',
+                    data: [],
+                    axisLabel: {
+                        rotate: 45,
+                        interval: Math.floor(240 / 20) // 显示约20个时间标签
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '价格',
+                        position: 'left',
+                        scale: true
+                    },
+                    {
+                        type: 'value',
+                        name: '成交量',
+                        position: 'right',
+                        scale: true
+                    }
+                ],
+                series: [
+                    {
+                        name: '价格',
+                        type: 'line',
+                        data: [],
+                        smooth: true,
+                        lineStyle: {
+                            width: 2
+                        },
+                        itemStyle: {
+                            color: '#ff4757'
+                        },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(255, 71, 87, 0.3)' },
+                                    { offset: 1, color: 'rgba(255, 71, 87, 0.1)' }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        yAxisIndex: 1,
+                        data: [],
+                        itemStyle: {
+                            color: 'rgba(52, 152, 219, 0.6)'
+                        }
+                    }
+                ],
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        start: 0,
+                        end: 100,
+                        handleIcon: 'M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z',
+                        handleSize: '80%',
+                        handleStyle: {
+                            color: '#fff',
+                            shadowBlur: 3,
+                            shadowColor: 'rgba(0, 0, 0, 0.6)',
+                            shadowOffsetX: 2,
+                            shadowOffsetY: 2
+                        }
+                    }
+                ]
+            });
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        // 显示状态
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        // 加载并调试数据
+        async function loadAndDebugData() {
+            const optionCode = document.getElementById('optionCode').value;
+            if (!optionCode) {
+                showStatus('请输入期权代码', 'error');
+                return;
+            }
+
+            showStatus(`正在获取 ${optionCode} 的分时数据...`, 'info');
+            document.getElementById('rawResponse').textContent = '请求中...';
+
+            try {
+                const response = await fetch(`${API_BASE}/${optionCode}/minute`);
+                const data = await response.json();
+
+                // 显示原始响应
+                document.getElementById('rawResponse').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.status === 'success') {
+                    showStatus(`✅ 成功获取数据 (${data.count || 0} 条)`, 'success');
+                    analyzeAndDisplay(data);
+                } else {
+                    showStatus(`❌ 获取失败: ${data.message || data.detail || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                document.getElementById('rawResponse').textContent = `网络错误: ${error.message}`;
+            }
+        }
+
+        // 分析并显示数据
+        function analyzeAndDisplay(data) {
+            const minuteData = data.minute_data || data.data || [];
+
+            if (!minuteData || minuteData.length === 0) {
+                showStatus('❌ 没有分时数据', 'error');
+                return;
+            }
+
+            // 分析数据
+            const analysis = analyzeMinuteData(minuteData, data);
+
+            // 更新分析显示
+            updateAnalysisDisplay(analysis);
+
+            // 更新图表
+            updateChart(minuteData);
+
+            // 诊断问题
+            diagnoseIssues(analysis, minuteData);
+        }
+
+        // 分析分时数据
+        function analyzeMinuteData(minuteData, response) {
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price || 0);
+            const volumes = minuteData.map(item => item.volume || 0);
+
+            const firstTime = times[0];
+            const lastTime = times[times.length - 1];
+            const firstPrice = prices[0];
+            const lastPrice = prices[prices.length - 1];
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+            const totalVolume = volumes.reduce((a, b) => a + b, 0);
+            const maxVolume = Math.max(...volumes);
+
+            // 时间分析
+            const morningCount = times.filter(t => t >= "09:30" && t <= "11:30").length;
+            const afternoonCount = times.filter(t => t >= "13:00" && t <= "15:00").length;
+            const invalidTimes = times.filter(t => {
+                const [hour, minute] = t.split(':').map(Number);
+                return !((hour === 9 && minute >= 30) || (hour >= 10 && hour <= 11) || (hour >= 13 && hour <= 15));
+            });
+
+            // 价格分析
+            const priceChanges = [];
+            for (let i = 1; i < prices.length; i++) {
+                if (prices[i-1] > 0) {
+                    priceChanges.push(((prices[i] - prices[i-1]) / prices[i-1] * 100));
+                }
+            }
+            const maxChange = Math.max(...priceChanges);
+            const minChange = Math.min(...priceChanges);
+            const volatility = Math.sqrt(priceChanges.reduce((sum, change) => sum + change * change, 0) / priceChanges.length);
+
+            return {
+                basic: {
+                    dataPoints: minuteData.length,
+                    timeRange: `${firstTime} - ${lastTime}`,
+                    source: response.source || 'unknown',
+                    code: response.code || 'unknown'
+                },
+                timeDistribution: {
+                    morningCount,
+                    afternoonCount,
+                    invalidTimes: invalidTimes.length,
+                    expectedTotal: 241 // 121 + 120 + 1 (9:30和15:00)
+                },
+                priceStats: {
+                    firstPrice: firstPrice.toFixed(4),
+                    lastPrice: lastPrice.toFixed(4),
+                    minPrice: minPrice.toFixed(4),
+                    maxPrice: maxPrice.toFixed(4),
+                    avgPrice: avgPrice.toFixed(4),
+                    change: ((lastPrice - firstPrice) / firstPrice * 100).toFixed(2),
+                    volatility: volatility.toFixed(4),
+                    maxChange: maxChange.toFixed(2),
+                    minChange: minChange.toFixed(2)
+                },
+                volumeStats: {
+                    totalVolume: totalVolume.toLocaleString(),
+                    maxVolume: maxVolume.toLocaleString(),
+                    avgVolume: Math.round(totalVolume / volumes.length).toLocaleString()
+                }
+            };
+        }
+
+        // 更新分析显示
+        function updateAnalysisDisplay(analysis) {
+            // 基本信息
+            document.getElementById('basicInfo').innerHTML = `
+                <strong>期权代码:</strong> ${analysis.basic.code}<br/>
+                <strong>数据点数:</strong> ${analysis.basic.dataPoints}<br/>
+                <strong>时间范围:</strong> ${analysis.basic.timeRange}<br/>
+                <strong>数据源:</strong> ${analysis.basic.source}
+            `;
+
+            // 时间分布
+            document.getElementById('timeDistribution').innerHTML = `
+                <strong>上午时段 (9:30-11:30):</strong> ${analysis.timeDistribution.morningCount} 点<br/>
+                <strong>下午时段 (13:00-15:00):</strong> ${analysis.timeDistribution.afternoonCount} 点<br/>
+                <strong>无效时间点:</strong> <span style="color: ${analysis.timeDistribution.invalidTimes > 0 ? 'red' : 'green'}">${analysis.timeDistribution.invalidTimes}</span><br/>
+                <strong>预期总点数:</strong> ${analysis.timeDistribution.expectedTotal}<br/>
+                <strong>覆盖率:</strong> ${((analysis.timeDistribution.morningCount + analysis.timeDistribution.afternoonCount) / analysis.timeDistribution.expectedTotal * 100).toFixed(1)}%
+            `;
+
+            // 价格统计
+            document.getElementById('priceStats').innerHTML = `
+                <strong>开盘价:</strong> ${analysis.priceStats.firstPrice}<br/>
+                <strong>收盘价:</strong> ${analysis.priceStats.lastPrice}<br/>
+                <strong>最低价:</strong> ${analysis.priceStats.minPrice}<br/>
+                <strong>最高价:</strong> ${analysis.priceStats.maxPrice}<br/>
+                <strong>平均价:</strong> ${analysis.priceStats.avgPrice}<br/>
+                <strong>涨跌幅:</strong> <span style="color: ${parseFloat(analysis.priceStats.change) >= 0 ? 'green' : 'red'}">${analysis.priceStats.change}%</span><br/>
+                <strong>波动率:</strong> ${analysis.priceStats.volatility}
+            `;
+
+            // 成交量统计
+            document.getElementById('volumeStats').innerHTML = `
+                <strong>总成交量:</strong> ${analysis.volumeStats.totalVolume}<br/>
+                <strong>最大单量:</strong> ${analysis.volumeStats.maxVolume}<br/>
+                <strong>平均量:</strong> ${analysis.volumeStats.avgVolume}
+            `;
+
+            // 价格样本
+            const sampleContainer = document.getElementById('priceSample');
+            sampleContainer.innerHTML = '';
+            for (let i = 0; i < Math.min(12, analysis.basic.dataPoints); i += Math.floor(analysis.basic.dataPoints / 12)) {
+                const item = document.createElement('div');
+                item.className = 'price-item';
+                item.innerHTML = `
+                    <div class="price-time">${minuteData[i].time}</div>
+                    <div class="price-value">${minuteData[i].price.toFixed(4)}</div>
+                `;
+                sampleContainer.appendChild(item);
+            }
+        }
+
+        // 更新图表
+        function updateChart(minuteData) {
+            if (!chart) {
+                initChart();
+            }
+
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+
+            chart.setOption({
+                xAxis: {
+                    data: times
+                },
+                series: [
+                    {
+                        data: prices
+                    },
+                    {
+                        data: volumes
+                    }
+                ]
+            });
+        }
+
+        // 诊断问题
+        function diagnoseIssues(analysis, minuteData) {
+            const issues = [];
+            const warnings = [];
+
+            // 检查时间分布
+            if (analysis.timeDistribution.invalidTimes > 0) {
+                issues.push(`❌ 发现 ${analysis.timeDistribution.invalidTimes} 个无效时间点`);
+            }
+
+            if (analysis.timeDistribution.morningCount < 100) {
+                issues.push(`❌ 上午数据点不足 (${analysis.timeDistribution.morningCount} < 100)`);
+            }
+
+            if (analysis.timeDistribution.afternoonCount < 100) {
+                issues.push(`❌ 下午数据点不足 (${analysis.timeDistribution.afternoonCount} < 100)`);
+            }
+
+            // 检查价格数据
+            if (analysis.priceStats.firstPrice <= 0 || analysis.priceStats.lastPrice <= 0) {
+                issues.push('❌ 价格数据异常 (小于等于0)');
+            }
+
+            if (parseFloat(analysis.priceStats.volatility) === 0) {
+                warnings.push('⚠️ 价格无波动，可能是模拟数据');
+            }
+
+            if (Math.abs(parseFloat(analysis.priceStats.change)) > 50) {
+                warnings.push('⚠️ 价格变化过大，可能存在数据异常');
+            }
+
+            // 检查数据完整性
+            const expectedStart = "09:30";
+            const expectedEnd = "15:00";
+            const [actualStart, actualEnd] = analysis.basic.timeRange.split(' - ');
+
+            if (actualStart !== expectedStart) {
+                issues.push(`❌ 开盘时间错误 (应为${expectedStart}，实际为${actualStart})`);
+            }
+
+            if (actualEnd !== expectedEnd) {
+                issues.push(`❌ 收盘时间错误 (应为${expectedEnd}，实际为${actualEnd})`);
+            }
+
+            // 显示诊断结果
+            const diagnosticsDiv = document.getElementById('diagnostics');
+            const issuesList = document.getElementById('issuesList');
+
+            if (issues.length === 0 && warnings.length === 0) {
+                diagnosticsDiv.className = 'status success';
+                diagnosticsDiv.innerHTML = '🎉 未发现明显问题，分时图数据正常';
+                issuesList.innerHTML = '<li style="color: green;">✅ 所有检查通过</li>';
+            } else {
+                if (issues.length > 0) {
+                    diagnosticsDiv.className = 'status error';
+                    diagnosticsDiv.innerHTML = `❌ 发现 ${issues.length} 个严重问题`;
+                } else {
+                    diagnosticsDiv.className = 'status warning';
+                    diagnosticsDiv.innerHTML = `⚠️ 发现 ${warnings.length} 个警告`;
+                }
+
+                issuesList.innerHTML = '';
+                [...issues, ...warnings].forEach(issue => {
+                    const li = document.createElement('li');
+                    li.innerHTML = issue;
+                    issuesList.appendChild(li);
+                });
+            }
+        }
+
+        // 清空所有
+        function clearAll() {
+            document.getElementById('status').className = 'status info';
+            document.getElementById('status').innerHTML = '等待获取数据...';
+            document.getElementById('rawResponse').textContent = '等待API调用...';
+            document.getElementById('basicInfo').innerHTML = '无数据';
+            document.getElementById('timeDistribution').innerHTML = '无数据';
+            document.getElementById('priceStats').innerHTML = '无数据';
+            document.getElementById('volumeStats').innerHTML = '无数据';
+            document.getElementById('priceSample').innerHTML = '无数据';
+            document.getElementById('diagnostics').className = 'status info';
+            document.getElementById('diagnostics').innerHTML = '等待诊断...';
+            document.getElementById('issuesList').innerHTML = '<li>等待数据加载...</li>';
+
+            if (chart) {
+                chart.clear();
+            }
+        }
+
+        // 全局变量用于价格样本
+        let minuteData = [];
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>期权多K线测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+</head>
+<body>
+    <h1>期权K线图测试 - 90005854</h1>
+    <div id="chart" style="width: 1000px; height: 600px;"></div>
+    
+    <script>
+        // 获取期权K线数据
+        fetch('http://localhost:9000/api/options/90005854/kline?period=daily&limit=20', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            mode: 'cors'
+        })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('期权K线数据:', data);
+                
+                if (data.status === 'success' && data.klines && data.klines.length > 0) {
+                    const chart = echarts.init(document.getElementById('chart'));
+                    
+                    // 处理K线数据
+                    const dates = data.klines.map(item => item.date);
+                    const klineData = data.klines.map(item => [
+                        item.open, item.close, item.low, item.high
+                    ]);
+                    const volumes = data.klines.map(item => item.volume);
+                    
+                    const option = {
+                        title: {
+                            text: `期权K线图 - ${data.code}`,
+                            left: 'center'
+                        },
+                        tooltip: {
+                            trigger: 'axis',
+                            axisPointer: {
+                                type: 'cross'
+                            },
+                            formatter: function(params) {
+                                const klineData = data.klines[params[0].dataIndex];
+                                return `
+                                    日期: ${klineData.date}<br/>
+                                    开盘: ${klineData.open.toFixed(4)}<br/>
+                                    收盘: ${klineData.close.toFixed(4)}<br/>
+                                    最高: ${klineData.high.toFixed(4)}<br/>
+                                    最低: ${klineData.low.toFixed(4)}<br/>
+                                    成交量: ${klineData.volume}<br/>
+                                    涨跌幅: ${klineData.change_percent.toFixed(2)}%
+                                `;
+                            }
+                        },
+                        legend: {
+                            data: ['K线', '成交量'],
+                            top: 30
+                        },
+                        grid: [
+                            {
+                                left: '10%',
+                                right: '8%',
+                                height: '50%'
+                            },
+                            {
+                                left: '10%',
+                                right: '8%',
+                                top: '70%',
+                                height: '16%'
+                            }
+                        ],
+                        xAxis: [
+                            {
+                                type: 'category',
+                                data: dates,
+                                scale: true,
+                                boundaryGap: false,
+                                axisLine: {onZero: false},
+                                splitLine: {show: false},
+                                splitNumber: 20,
+                                min: 'dataMin',
+                                max: 'dataMax'
+                            },
+                            {
+                                type: 'category',
+                                gridIndex: 1,
+                                data: dates,
+                                scale: true,
+                                boundaryGap: false,
+                                axisLine: {onZero: false},
+                                axisTick: {show: false},
+                                splitLine: {show: false},
+                                axisLabel: {show: false},
+                                splitNumber: 20,
+                                min: 'dataMin',
+                                max: 'dataMax'
+                            }
+                        ],
+                        yAxis: [
+                            {
+                                scale: true,
+                                splitArea: {
+                                    show: true
+                                }
+                            },
+                            {
+                                scale: true,
+                                gridIndex: 1,
+                                splitNumber: 2,
+                                axisLabel: {show: false},
+                                axisLine: {show: false},
+                                axisTick: {show: false},
+                                splitLine: {show: false}
+                            }
+                        ],
+                        dataZoom: [
+                            {
+                                type: 'inside',
+                                xAxisIndex: [0, 1],
+                                start: 0,
+                                end: 100
+                            },
+                            {
+                                show: true,
+                                xAxisIndex: [0, 1],
+                                type: 'slider',
+                                top: '85%',
+                                start: 0,
+                                end: 100
+                            }
+                        ],
+                        series: [
+                            {
+                                name: 'K线',
+                                type: 'candlestick',
+                                data: klineData,
+                                itemStyle: {
+                                    color: '#ef232a',
+                                    color0: '#14b143',
+                                    borderColor: '#ef232a',
+                                    borderColor0: '#14b143'
+                                },
+                                markPoint: {
+                                    label: {
+                                        formatter: function (param) {
+                                            return param != null ? Math.round(param.value) + '' : '';
+                                        }
+                                    },
+                                    data: [
+                                        {
+                                            name: 'highest value',
+                                            type: 'max',
+                                            valueDim: 'highest'
+                                        },
+                                        {
+                                            name: 'lowest value',
+                                            type: 'min',
+                                            valueDim: 'lowest'
+                                        }
+                                    ],
+                                    tooltip: {
+                                        formatter: function (param) {
+                                            return param.name + '<br>' + (param.data.coord || '');
+                                        }
+                                    }
+                                }
+                            },
+                            {
+                                name: '成交量',
+                                type: 'bar',
+                                xAxisIndex: 1,
+                                yAxisIndex: 1,
+                                data: volumes,
+                                itemStyle: {
+                                    color: function(params) {
+                                        const kline = data.klines[params.dataIndex];
+                                        return kline.close >= kline.open ? '#ef232a' : '#14b143';
+                                    }
+                                }
+                            }
+                        ]
+                    };
+                    
+                    chart.setOption(option);
+                    
+                    // 显示统计信息
+                    const info = document.createElement('div');
+                    info.innerHTML = `
+                        <h3>K线统计:</h3>
+                        <p>总K线数: <strong>${data.klines.length}</strong></p>
+                        <p>日期范围: ${data.klines[0].date} 至 ${data.klines[data.klines.length-1].date}</p>
+                        <p>数据源: ${data.data_source}</p>
+                        <p>说明: ${data.notice}</p>
+                    `;
+                    info.style.marginTop = '20px';
+                    document.body.appendChild(info);
+                } else {
+                    document.getElementById('chart').innerHTML = '<h3>无法获取K线数据</h3>';
+                }
+            })
+            .catch(error => {
+                console.error('获取数据失败:', error);
+                document.getElementById('chart').innerHTML = '<h3>获取数据失败</h3>';
+            });
+    </script>
+</body>
+</html>

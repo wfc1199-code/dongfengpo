@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>K线涨跌幅右轴测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chart {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #333;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 8px 16px;
+            background: #00da3c;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00ff4c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>K线涨跌幅右轴测试</h1>
+        
+        <div class="controls">
+            <button onclick="load5MinData()">5分钟K线</button>
+            <button onclick="load15MinData()">15分钟K线</button>
+            <button onclick="loadDailyData()">日K线</button>
+            <span id="status">准备就绪</span>
+        </div>
+        
+        <div id="chart" class="chart"></div>
+    </div>
+
+    <script>
+        const chart = echarts.init(document.getElementById('chart'));
+        const status = document.getElementById('status');
+        
+        // 生成K线数据
+        function generateKlineData(count, interval) {
+            const data = [];
+            const dates = [];
+            const volumes = [];
+            
+            let basePrice = 10;
+            const now = new Date();
+            
+            for (let i = 0; i < count; i++) {
+                let dateStr;
+                if (interval === 'daily') {
+                    const date = new Date(now.getTime() - (count - i - 1) * 24 * 60 * 60 * 1000);
+                    dateStr = date.toISOString().split('T')[0];
+                } else if (interval === '5min') {
+                    const date = new Date(now.getTime() - (count - i - 1) * 5 * 60 * 1000);
+                    dateStr = date.toISOString().replace('T', ' ').substring(0, 16);
+                } else { // 15min
+                    const date = new Date(now.getTime() - (count - i - 1) * 15 * 60 * 1000);
+                    dateStr = date.toISOString().replace('T', ' ').substring(0, 16);
+                }
+                
+                // 生成K线数据
+                const change = (Math.random() - 0.5) * 0.5;
+                const open = basePrice + change;
+                const close = basePrice + change + (Math.random() - 0.5) * 0.3;
+                const high = Math.max(open, close) + Math.random() * 0.2;
+                const low = Math.min(open, close) - Math.random() * 0.2;
+                const volume = Math.floor(Math.random() * 1000000) + 500000;
+                
+                dates.push(dateStr);
+                data.push([open.toFixed(2), close.toFixed(2), low.toFixed(2), high.toFixed(2)]);
+                volumes.push(volume);
+                
+                basePrice = parseFloat(close);
+            }
+            
+            return { dates, data, volumes };
+        }
+        
+        function renderChart(title, dates, klineData, volumes) {
+            // 获取第一根K线的开盘价作为基准
+            const basePrice = parseFloat(klineData[0][0]);
+            
+            // 计算最大最小值，用于同步左右轴
+            let minPrice = Infinity, maxPrice = -Infinity;
+            klineData.forEach(item => {
+                minPrice = Math.min(minPrice, parseFloat(item[2])); // low
+                maxPrice = Math.max(maxPrice, parseFloat(item[3])); // high
+            });
+            
+            const option = {
+                title: {
+                    text: title,
+                    left: 'center',
+                    textStyle: { color: '#fff', fontSize: 18 }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    formatter: function(params) {
+                        if (!params || params.length === 0) return '';
+                        const param = params[0];
+                        const data = param.data;
+                        const open = parseFloat(data[0]);
+                        const close = parseFloat(data[1]);
+                        const low = parseFloat(data[2]);
+                        const high = parseFloat(data[3]);
+                        const changePercent = ((close - basePrice) / basePrice * 100).toFixed(2);
+                        
+                        return `${param.name}<br/>
+                                开盘: ${open}<br/>
+                                收盘: ${close}<br/>
+                                最低: ${low}<br/>
+                                最高: ${high}<br/>
+                                涨跌幅: ${changePercent > 0 ? '+' : ''}${changePercent}%`;
+                    }
+                },
+                legend: {
+                    data: ['K线', '成交量'],
+                    top: 30,
+                    textStyle: { color: '#ccc' }
+                },
+                grid: [
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '12%',
+                        height: '55%'
+                    },
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '72%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            interval: 'auto'
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    // 左轴 - 价格
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        position: 'left',
+                        min: minPrice,
+                        max: maxPrice,
+                        axisLine: { 
+                            show: true,
+                            lineStyle: { color: '#555' } 
+                        },
+                        axisLabel: { 
+                            color: '#ccc',
+                            formatter: '{value}'
+                        },
+                        splitLine: { 
+                            lineStyle: { color: '#222' } 
+                        }
+                    },
+                    // 右轴 - 涨跌幅
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        position: 'right',
+                        min: minPrice,
+                        max: maxPrice,
+                        axisLine: { 
+                            show: true,
+                            lineStyle: { color: '#555' } 
+                        },
+                        axisLabel: { 
+                            show: true,
+                            color: function(value) {
+                                const percent = ((value - basePrice) / basePrice * 100);
+                                return percent > 0 ? '#ff4757' : percent < 0 ? '#2ed573' : '#ccc';
+                            },
+                            formatter: function(value) {
+                                const percent = ((value - basePrice) / basePrice * 100).toFixed(2);
+                                return (percent > 0 ? '+' : '') + percent + '%';
+                            }
+                        },
+                        splitLine: { 
+                            show: false 
+                        }
+                    },
+                    // 成交量轴
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            formatter: function(value) {
+                                return (value / 1000000).toFixed(1) + 'M';
+                            }
+                        },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: klineData,
+                        xAxisIndex: 0,
+                        yAxisIndex: 0,
+                        itemStyle: {
+                            color: '#ff4757',  // 下跌颜色
+                            color0: '#2ed573', // 上涨颜色
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 2,
+                        data: volumes,
+                        itemStyle: { 
+                            color: function(params) {
+                                const kline = klineData[params.dataIndex];
+                                const open = parseFloat(kline[0]);
+                                const close = parseFloat(kline[1]);
+                                return close >= open ? '#2ed573' : '#ff4757';
+                            }
+                        }
+                    }
+                ]
+            };
+            
+            chart.setOption(option, true);
+            status.textContent = `已加载: ${title}`;
+        }
+        
+        function load5MinData() {
+            const { dates, data, volumes } = generateKlineData(48, '5min');
+            renderChart('5分钟K线图', dates, data, volumes);
+        }
+        
+        function load15MinData() {
+            const { dates, data, volumes } = generateKlineData(32, '15min');
+            renderChart('15分钟K线图', dates, data, volumes);
+        }
+        
+        function loadDailyData() {
+            const { dates, data, volumes } = generateKlineData(60, 'daily');
+            renderChart('日K线图', dates, data, volumes);
+        }
+        
+        // 默认加载日K线
+        loadDailyData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模块化API测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-item { margin: 15px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .test-item.success { background-color: #d4edda; border-color: #c3e6cb; }
+        .test-item.error { background-color: #f8d7da; border-color: #f5c6cb; }
+        h3 { margin-top: 0; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>东风破模块化API测试</h1>
+    <button onclick="runAllTests()">运行所有测试</button>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:9000';
+
+        async function testAPI(name, url, expectedKeys) {
+            const div = document.createElement('div');
+            div.className = 'test-item';
+            div.innerHTML = `<h3>${name}</h3><p>测试中...</p>`;
+            document.getElementById('results').appendChild(div);
+
+            try {
+                const response = await fetch(`${API_BASE}${url}`);
+                const data = await response.json();
+
+                let html = `<h3>${name}</h3>`;
+                html += `<p><strong>状态:</strong> ${response.status} ${response.statusText}</p>`;
+
+                if (response.ok) {
+                    html += `<p><strong>返回数据:</strong></p>`;
+                    html += `<pre>${JSON.stringify(data, null, 2).substring(0, 500)}...</pre>`;
+
+                    if (expectedKeys) {
+                        const hasAllKeys = expectedKeys.every(key => key in data);
+                        if (hasAllKeys) {
+                            div.className = 'test-item success';
+                            html += `<p>✅ 包含所有必需字段: ${expectedKeys.join(', ')}</p>`;
+                        } else {
+                            div.className = 'test-item error';
+                            html += `<p>❌ 缺少字段。期望: ${expectedKeys.join(', ')}</p>`;
+                            html += `<p>实际字段: ${Object.keys(data).join(', ')}</p>`;
+                        }
+                    } else {
+                        div.className = 'test-item success';
+                    }
+                } else {
+                    div.className = 'test-item error';
+                    html += `<p>❌ 请求失败</p>`;
+                    html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                }
+
+                div.innerHTML = html;
+            } catch (error) {
+                div.className = 'test-item error';
+                div.innerHTML = `<h3>${name}</h3><p>❌ 错误: ${error.message}</p>`;
+            }
+        }
+
+        async function runAllTests() {
+            document.getElementById('results').innerHTML = '';
+
+            await testAPI('健康检查', '/health', ['status', 'version']);
+            await testAPI('实时数据', '/api/stocks/000001/realtime', ['code', 'data']);
+            await testAPI('分时数据 (minute)', '/api/stocks/000001/minute', ['code', 'name', 'minute_data']);
+            await testAPI('分时数据 (timeshare)', '/api/stocks/000001/timeshare', ['code', 'name', 'minute_data']);
+            await testAPI('K线数据', '/api/stocks/000001/kline?period=daily&limit=5', ['code', 'name', 'klines']);
+            await testAPI('自选股配置', '/api/config/favorites', ['favorites']);
+        }
+
+        // 页面加载时自动运行
+        window.onload = runAllTests;
+    </script>
+</body>
+</html>

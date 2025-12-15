@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-10-01T13:59:43Z",
+  "duration_seconds": 30,
+  "signal_api": {
+    "url": "http://localhost:8000",
+    "success_count": 6,
+    "failure_count": 0,
+    "success_rate": 100.00,
+    "response_times_ms": [
+  17,
+  33,
+  35,
+  33,
+  35,
+  36
+]
+  }
+}

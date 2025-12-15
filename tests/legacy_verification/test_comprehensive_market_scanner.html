@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全市场扫描器测试 - 无筛选版本</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            border-bottom: 3px solid #e74c3c;
+            padding-bottom: 10px;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #229954;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        .btn-warning {
+            background-color: #f39c12;
+            color: white;
+        }
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .btn-info:hover {
+            background-color: #138496;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.loading {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .results {
+            margin-top: 20px;
+        }
+        .stock-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .stock-table th,
+        .stock-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        .stock-table th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+            color: #495057;
+        }
+        .stock-table tr:hover {
+            background-color: #f1f3f4;
+        }
+        .positive {
+            color: #e74c3c;
+        }
+        .negative {
+            color: #27ae60;
+        }
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            min-width: 120px;
+        }
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .input-group label {
+            min-width: 100px;
+            font-weight: bold;
+        }
+        .input-group input, .input-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 全市场扫描器 - 无筛选版本</h1>
+
+        <div class="input-group">
+            <label>数量限制:</label>
+            <input type="number" id="limitInput" value="50" min="1" max="500">
+            <span>股票数量 (最多500只)</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-success" onclick="scanMarket('top_gainers')">📈 涨幅榜</button>
+            <button class="btn btn-danger" onclick="scanMarket('top_losers')">📉 跌幅榜</button>
+            <button class="btn btn-primary" onclick="scanMarket('top_volume')">📊 成交量榜</button>
+            <button class="btn btn-info" onclick="scanMarket('top_turnover')">🔄 换手率榜</button>
+            <button class="btn btn-warning" onclick="scanMarket('limit_up')">🚀 涨停板</button>
+            <button class="btn btn-danger" onclick="scanMarket('limit_down')">⬇️ 跌停板</button>
+            <button class="btn btn-primary" onclick="scanMarket('volume_surge')">💥 放量异动</button>
+            <button class="btn btn-success" onclick="scanMarket('price_breakout')">📈 价格突破</button>
+            <button class="btn btn-info" onclick="scanMarket('continuous_rise')">⬆️ 连续上涨</button>
+            <button class="btn btn-warning" onclick="scanMarket('reversal_signals')">🔄 反转信号</button>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="getMarketSummary()">📋 市场概况</button>
+            <button class="btn btn-info" onclick="getSectorAnalysis()">🏢 板块分析</button>
+            <button class="btn btn-success" onclick="getActiveStocks()">⚡ 活跃股票</button>
+            <button class="btn btn-warning" onclick="getAllScanTypes()">📝 所有扫描类型</button>
+        </div>
+
+        <div id="status" class="status" style="display: none;"></div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">总数量</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgChange">0%</div>
+                <div class="stat-label">平均涨跌幅</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="maxChange">0%</div>
+                <div class="stat-label">最大涨跌幅</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeCount">0</div>
+                <div class="stat-label">活跃股票数</div>
+            </div>
+        </div>
+
+        <div class="results" id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9000/api/market-scanner';
+
+        function showStatus(message, type = 'loading') {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function hideStatus() {
+            document.getElementById('status').style.display = 'none';
+        }
+
+        async function scanMarket(scanType) {
+            const limit = document.getElementById('limitInput').value || 50;
+            showStatus(`正在扫描${getScanTypeName(scanType)}...`);
+
+            try {
+                const response = await fetch(`${API_BASE}/scan/${scanType}?limit=${limit}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showStatus(`✅ 成功获取${data.count}只股票`, 'success');
+                    displayStocks(data.stocks, getScanTypeName(scanType));
+                    updateStats(data.stocks);
+                } else {
+                    showStatus(`❌ 获取数据失败`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                console.error('扫描市场失败:', error);
+            }
+        }
+
+        async function getMarketSummary() {
+            showStatus('正在获取市场概况...');
+
+            try {
+                const response = await fetch(`${API_BASE}/market-summary`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showStatus('✅ 市场概况获取成功', 'success');
+                    displayMarketSummary(data.summary);
+                } else {
+                    showStatus('❌ 获取市场概况失败', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                console.error('获取市场概况失败:', error);
+            }
+        }
+
+        async function getSectorAnalysis() {
+            showStatus('正在获取板块分析...');
+
+            try {
+                const response = await fetch(`${API_BASE}/sector-analysis`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showStatus('✅ 板块分析获取成功', 'success');
+                    displaySectorAnalysis(data.analysis);
+                } else {
+                    showStatus('❌ 获取板块分析失败', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                console.error('获取板块分析失败:', error);
+            }
+        }
+
+        async function getActiveStocks() {
+            const limit = document.getElementById('limitInput').value || 30;
+            showStatus('正在获取活跃股票...');
+
+            try {
+                const response = await fetch(`${API_BASE}/active-stocks?limit=${limit}`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showStatus(`✅ 成功获取${data.count}只活跃股票`, 'success');
+                    displayStocks(data.stocks, '活跃股票');
+                    updateStats(data.stocks);
+                } else {
+                    showStatus('❌ 获取活跃股票失败', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                console.error('获取活跃股票失败:', error);
+            }
+        }
+
+        async function getAllScanTypes() {
+            showStatus('正在获取扫描类型...');
+
+            try {
+                const response = await fetch(`${API_BASE}/scan-types`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    showStatus('✅ 扫描类型获取成功', 'success');
+                    displayScanTypes(data.scan_types);
+                } else {
+                    showStatus('❌ 获取扫描类型失败', 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                console.error('获取扫描类型失败:', error);
+            }
+        }
+
+        function getScanTypeName(scanType) {
+            const names = {
+                'top_gainers': '涨幅榜',
+                'top_losers': '跌幅榜',
+                'top_volume': '成交量榜',
+                'top_turnover': '换手率榜',
+                'limit_up': '涨停板',
+                'limit_down': '跌停板',
+                'volume_surge': '放量异动',
+                'price_breakout': '价格突破',
+                'continuous_rise': '连续上涨',
+                'reversal_signals': '反转信号'
+            };
+            return names[scanType] || scanType;
+        }
+
+        function displayStocks(stocks, title) {
+            const results = document.getElementById('results');
+
+            if (!stocks || stocks.length === 0) {
+                results.innerHTML = `<h3>${title}</h3><p>暂无数据</p>`;
+                return;
+            }
+
+            const html = `
+                <h3>📊 ${title} (${stocks.length}只)</h3>
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th>代码</th>
+                            <th>名称</th>
+                            <th>价格</th>
+                            <th>涨跌额</th>
+                            <th>涨跌幅</th>
+                            <th>成交量</th>
+                            <th>成交额</th>
+                            <th>换手率</th>
+                            <th>市盈率</th>
+                            <th>总市值</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stocks.map(stock => `
+                            <tr>
+                                <td>${stock.code}</td>
+                                <td>${stock.name}</td>
+                                <td>¥${stock.price.toFixed(2)}</td>
+                                <td class="${stock.change >= 0 ? 'positive' : 'negative'}">
+                                    ${stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}
+                                </td>
+                                <td class="${stock.change_percent >= 0 ? 'positive' : 'negative'}">
+                                    ${stock.change_percent >= 0 ? '+' : ''}${stock.change_percent.toFixed(2)}%
+                                </td>
+                                <td>${formatNumber(stock.volume)}</td>
+                                <td>${formatMoney(stock.amount)}</td>
+                                <td>${stock.turnover_rate.toFixed(2)}%</td>
+                                <td>${stock.pe_ratio ? stock.pe_ratio.toFixed(2) : '-'}</td>
+                                <td>${formatMoney(stock.market_cap)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            results.innerHTML = html;
+        }
+
+        function displayMarketSummary(summary) {
+            const results = document.getElementById('results');
+            const html = `
+                <h3>📋 市场概况</h3>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number">${summary.gainers_count || 0}</div>
+                        <div class="stat-label">上涨股票</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${summary.losers_count || 0}</div>
+                        <div class="stat-label">下跌股票</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${summary.limit_up_count || 0}</div>
+                        <div class="stat-label">涨停数量</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${summary.market_sentiment || '中性'}</div>
+                        <div class="stat-label">市场情绪</div>
+                    </div>
+                </div>
+                ${summary.top_gainer ? `
+                    <h4>🏆 领涨股票</h4>
+                    <p><strong>${summary.top_gainer.name} (${summary.top_gainer.code})</strong> -
+                    涨幅: <span class="positive">+${summary.top_gainer.change_percent.toFixed(2)}%</span></p>
+                ` : ''}
+                ${summary.most_active ? `
+                    <h4>⚡ 最活跃股票</h4>
+                    <p><strong>${summary.most_active.name} (${summary.most_active.code})</strong> -
+                    成交额: ${formatMoney(summary.most_active.amount)}</p>
+                ` : ''}
+            `;
+            results.innerHTML = html;
+        }
+
+        function displaySectorAnalysis(analysis) {
+            const results = document.getElementById('results');
+            const html = `
+                <h3>🏢 板块分析</h3>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-number">${analysis.total_sectors || 0}</div>
+                        <div class="stat-label">总板块数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${analysis.avg_change ? analysis.avg_change.toFixed(2) + '%' : '0%'}</div>
+                        <div class="stat-label">平均涨跌幅</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${analysis.hot_sectors ? analysis.hot_sectors.length : 0}</div>
+                        <div class="stat-label">热门板块</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${analysis.cold_sectors ? analysis.cold_sectors.length : 0}</div>
+                        <div class="stat-label">冷门板块</div>
+                    </div>
+                </div>
+                ${analysis.hot_sectors && analysis.hot_sectors.length > 0 ? `
+                    <h4>🔥 热门板块</h4>
+                    <ul>
+                        ${analysis.hot_sectors.map(sector =>
+                            `<li>${sector.name} - <span class="positive">+${sector.change_percent.toFixed(2)}%</span></li>`
+                        ).join('')}
+                    </ul>
+                ` : ''}
+                ${analysis.cold_sectors && analysis.cold_sectors.length > 0 ? `
+                    <h4>❄️ 冷门板块</h4>
+                    <ul>
+                        ${analysis.cold_sectors.map(sector =>
+                            `<li>${sector.name} - <span class="negative">${sector.change_percent.toFixed(2)}%</span></li>`
+                        ).join('')}
+                    </ul>
+                ` : ''}
+            `;
+            results.innerHTML = html;
+        }
+
+        function displayScanTypes(scanTypes) {
+            const results = document.getElementById('results');
+            const html = `
+                <h3>📝 所有扫描类型</h3>
+                <table class="stock-table">
+                    <thead>
+                        <tr>
+                            <th>扫描类型</th>
+                            <th>名称</th>
+                            <th>描述</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${scanTypes.map(type => `
+                            <tr>
+                                <td><code>${type.value}</code></td>
+                                <td><strong>${type.name}</strong></td>
+                                <td>${type.description}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            results.innerHTML = html;
+        }
+
+        function updateStats(stocks) {
+            if (!stocks || stocks.length === 0) {
+                document.getElementById('stats').style.display = 'none';
+                return;
+            }
+
+            const totalCount = stocks.length;
+            const changes = stocks.map(s => s.change_percent);
+            const avgChange = changes.reduce((a, b) => a + b, 0) / changes.length;
+            const maxChange = Math.max(...changes.map(Math.abs));
+            const activeCount = stocks.filter(s => s.turnover_rate > 2.0).length;
+
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('avgChange').textContent = avgChange.toFixed(2) + '%';
+            document.getElementById('maxChange').textContent = maxChange.toFixed(2) + '%';
+            document.getElementById('activeCount').textContent = activeCount;
+
+            document.getElementById('stats').style.display = 'flex';
+        }
+
+        function formatNumber(num) {
+            if (num >= 100000000) {
+                return (num / 100000000).toFixed(1) + '亿';
+            } else if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '万';
+            }
+            return num.toLocaleString();
+        }
+
+        function formatMoney(amount) {
+            if (amount >= 100000000) {
+                return (amount / 100000000).toFixed(1) + '亿';
+            } else if (amount >= 10000) {
+                return (amount / 10000).toFixed(1) + '万';
+            }
+            return amount.toLocaleString();
+        }
+
+        // 页面加载完成后自动获取涨幅榜
+        window.addEventListener('load', () => {
+            scanMarket('top_gainers');
+        });
+    </script>
+</body>
+</html>

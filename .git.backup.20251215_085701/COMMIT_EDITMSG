@@ -1,0 +1,6 @@
+feat: archive backend v2.0.0 before deletion
+
+- Backup main_modular.py and modules/
+- BMAD refactored version is stable
+- All high-priority endpoints migrated successfully
+- Ready to delete legacy backend

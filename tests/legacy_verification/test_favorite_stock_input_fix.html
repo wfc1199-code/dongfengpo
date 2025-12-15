@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自选股输入框修复测试</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #e5e5e5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .test-section {
+            border: 1px solid #444;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            background: #1e1e1e;
+        }
+        .test-title {
+            font-weight: bold;
+            color: #4fc3f7;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #2e7d32; color: white; }
+        .error { background: #d32f2f; color: white; }
+        .info { background: #1976d2; color: white; }
+        .warning { background: #f57c00; color: white; }
+
+        /* 复制StockList的修复样式 */
+        .add-stock-panel {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .search-input-wrapper {
+            margin-bottom: 8px;
+        }
+
+        .add-stock-panel .search-input,
+        .search-input {
+            width: 100% !important;
+            background: #2a2a2a !important;
+            border: 1px solid #444 !important;
+            border-radius: 4px !important;
+            padding: 8px 12px !important;
+            color: #fff !important;
+            font-size: 13px !important;
+            outline: none !important;
+            transition: border-color 0.2s ease;
+            /* 确保输入框可用 */
+            pointer-events: auto !important;
+            cursor: text !important;
+            opacity: 1 !important;
+            user-select: text !important;
+            -webkit-user-select: text !important;
+            /* 覆盖全局样式 */
+            box-sizing: border-box !important;
+        }
+
+        .add-stock-panel .search-input:focus,
+        .search-input:focus {
+            border-color: #4a9eff !important;
+            box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2) !important;
+            background: #2a2a2a !important;
+            color: #fff !important;
+        }
+
+        .add-stock-panel .search-input::placeholder,
+        .search-input::placeholder {
+            color: #888 !important;
+        }
+
+        .test-btn {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        .test-btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .input-test-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #333;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .favorites-list {
+            background: #333;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .favorite-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #444;
+        }
+
+        .delete-btn {
+            background: #d32f2f;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 自选股输入框修复测试</h1>
+
+        <div class="test-section">
+            <div class="test-title">1. CSS样式修复验证</div>
+            <div class="info">检查输入框是否应用了正确的样式修复</div>
+
+            <div class="add-stock-panel">
+                <div class="search-input-wrapper">
+                    <input
+                        type="text"
+                        placeholder="测试输入股票代码 (如: 000001)"
+                        class="search-input"
+                        id="test-input-1"
+                    />
+                </div>
+                <div class="input-test-result" id="input-status-1">
+                    输入框状态：等待测试...
+                </div>
+            </div>
+
+            <button class="test-btn" onclick="testInputFunctionality()">测试输入功能</button>
+            <button class="test-btn" onclick="testInputStyles()">检查样式</button>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">2. 实际添加自选股测试</div>
+            <div class="info">测试与后端API的完整交互</div>
+
+            <div class="add-stock-panel">
+                <div class="search-input-wrapper">
+                    <input
+                        type="text"
+                        placeholder="输入股票代码添加到自选股"
+                        class="search-input"
+                        id="stock-code-input"
+                        onkeypress="handleEnterKey(event)"
+                    />
+                </div>
+                <button class="test-btn" onclick="addToFavorites()">添加到自选股</button>
+                <button class="test-btn" onclick="loadFavorites()">刷新自选股列表</button>
+            </div>
+
+            <div id="favorites-display" class="favorites-list">
+                <div class="info">点击"刷新自选股列表"加载当前自选股</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <div class="test-title">3. API连接测试</div>
+            <div id="api-test-results">
+                <button class="test-btn" onclick="testConfigAPI()">测试配置API</button>
+                <button class="test-btn" onclick="testStockSearchAPI()">测试股票搜索API</button>
+            </div>
+            <div id="api-results" class="input-test-result">
+                API测试结果将显示在这里...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFavorites = [];
+
+        function testInputFunctionality() {
+            const input = document.getElementById('test-input-1');
+            const status = document.getElementById('input-status-1');
+
+            // 测试各种输入操作
+            const tests = [
+                { name: '聚焦测试', action: () => input.focus() },
+                { name: '输入测试', action: () => { input.value = 'TEST123'; input.dispatchEvent(new Event('input')); } },
+                { name: '选择测试', action: () => input.select() },
+                { name: '清空测试', action: () => { input.value = ''; input.dispatchEvent(new Event('input')); } }
+            ];
+
+            let results = [];
+            tests.forEach(test => {
+                try {
+                    test.action();
+                    results.push(`✅ ${test.name}: 成功`);
+                } catch (error) {
+                    results.push(`❌ ${test.name}: 失败 - ${error.message}`);
+                }
+            });
+
+            status.innerHTML = `
+                <strong>输入功能测试结果：</strong><br>
+                ${results.join('<br>')}
+                <br><br>
+                <strong>输入框属性：</strong><br>
+                disabled: ${input.disabled}<br>
+                readOnly: ${input.readOnly}<br>
+                style.pointerEvents: ${getComputedStyle(input).pointerEvents}<br>
+                style.cursor: ${getComputedStyle(input).cursor}<br>
+                style.opacity: ${getComputedStyle(input).opacity}
+            `;
+        }
+
+        function testInputStyles() {
+            const input = document.getElementById('test-input-1');
+            const styles = getComputedStyle(input);
+            const status = document.getElementById('input-status-1');
+
+            status.innerHTML = `
+                <strong>计算样式检查：</strong><br>
+                background-color: ${styles.backgroundColor}<br>
+                color: ${styles.color}<br>
+                border: ${styles.border}<br>
+                padding: ${styles.padding}<br>
+                pointer-events: ${styles.pointerEvents}<br>
+                cursor: ${styles.cursor}<br>
+                opacity: ${styles.opacity}<br>
+                user-select: ${styles.userSelect}<br>
+                box-sizing: ${styles.boxSizing}
+            `;
+        }
+
+        async function loadFavorites() {
+            try {
+                const response = await fetch('http://localhost:9000/api/config');
+                const config = await response.json();
+
+                const favorites = config.user_customization?.自定义监控?.自选股票池 || [];
+                currentFavorites = favorites;
+
+                renderFavorites(favorites);
+            } catch (error) {
+                document.getElementById('favorites-display').innerHTML = `
+                    <div class="error">❌ 加载自选股失败: ${error.message}</div>
+                `;
+            }
+        }
+
+        function renderFavorites(favorites) {
+            const container = document.getElementById('favorites-display');
+
+            if (favorites.length === 0) {
+                container.innerHTML = '<div class="info">📝 暂无自选股</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <div><strong>当前自选股 (${favorites.length}只)：</strong></div>
+                ${favorites.map(code => `
+                    <div class="favorite-item">
+                        <span><strong>${code}</strong></span>
+                        <button class="delete-btn" onclick="removeFromFavorites('${code}')">
+                            ✕ 删除
+                        </button>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        async function addToFavorites() {
+            const input = document.getElementById('stock-code-input');
+            const code = input.value.trim().toUpperCase();
+
+            if (!code) {
+                alert('请输入股票代码');
+                return;
+            }
+
+            if (currentFavorites.includes(code)) {
+                alert('该股票已在自选股中');
+                return;
+            }
+
+            try {
+                const newFavorites = [...currentFavorites, code];
+
+                const response = await fetch('http://localhost:9000/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_customization: {
+                            自定义监控: {
+                                自选股票池: newFavorites
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    currentFavorites = newFavorites;
+                    renderFavorites(newFavorites);
+                    input.value = '';
+
+                    // 显示成功状态
+                    const originalPlaceholder = input.placeholder;
+                    input.placeholder = `✅ 已添加 ${code}`;
+                    setTimeout(() => {
+                        input.placeholder = originalPlaceholder;
+                    }, 2000);
+                } else {
+                    alert(`添加失败: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                alert(`添加失败: ${error.message}`);
+            }
+        }
+
+        async function removeFromFavorites(code) {
+            try {
+                const newFavorites = currentFavorites.filter(c => c !== code);
+
+                const response = await fetch('http://localhost:9000/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_customization: {
+                            自定义监控: {
+                                自选股票池: newFavorites
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    currentFavorites = newFavorites;
+                    renderFavorites(newFavorites);
+                } else {
+                    alert(`删除失败: HTTP ${response.status}`);
+                }
+            } catch (error) {
+                alert(`删除失败: ${error.message}`);
+            }
+        }
+
+        function handleEnterKey(event) {
+            if (event.key === 'Enter') {
+                addToFavorites();
+            }
+        }
+
+        async function testConfigAPI() {
+            const results = document.getElementById('api-results');
+            results.innerHTML = '🔍 测试配置API...';
+
+            try {
+                const response = await fetch('http://localhost:9000/api/config');
+                const data = await response.json();
+
+                results.innerHTML = `
+                    <strong>✅ 配置API测试成功</strong><br>
+                    状态码: ${response.status}<br>
+                    响应大小: ${JSON.stringify(data).length} 字符<br>
+                    自选股数量: ${data.user_customization?.自定义监控?.自选股票池?.length || 0}
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <strong>❌ 配置API测试失败</strong><br>
+                    错误: ${error.message}
+                `;
+            }
+        }
+
+        async function testStockSearchAPI() {
+            const results = document.getElementById('api-results');
+            results.innerHTML = '🔍 测试股票搜索API...';
+
+            try {
+                const response = await fetch('http://localhost:9000/api/stocks/search?q=000001&limit=5');
+                const data = await response.json();
+
+                results.innerHTML = `
+                    <strong>✅ 股票搜索API测试成功</strong><br>
+                    状态码: ${response.status}<br>
+                    搜索结果: ${data.stocks?.length || 0} 只股票<br>
+                    示例结果: ${data.stocks?.[0]?.name || '无'}
+                `;
+            } catch (error) {
+                results.innerHTML = `
+                    <strong>❌ 股票搜索API测试失败</strong><br>
+                    错误: ${error.message}
+                `;
+            }
+        }
+
+        // 页面加载时自动测试
+        window.addEventListener('load', () => {
+            loadFavorites();
+        });
+    </script>
+</body>
+</html>

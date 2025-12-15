@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90005854期权分时图修复版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e5e5e5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .info-label {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        .info-value {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        
+        .btn {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        
+        .btn:hover {
+            background: #106ebe;
+        }
+        
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+        
+        .message {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background: #1a2a1a;
+            color: #51cf66;
+        }
+        
+        .error {
+            background: #2a1a1a;
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>90005854 期权分时图修复版</h1>
+        
+        <div class="panel">
+            <h3>期权信息</h3>
+            <div class="info-panel">
+                <div class="info-item">
+                    <div class="info-label">期权代码</div>
+                    <div class="info-value">90005854</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">期权名称</div>
+                    <div class="info-value" id="optionName">加载中...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">最新价</div>
+                    <div class="info-value" id="currentPrice">加载中...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">涨跌幅</div>
+                    <div class="info-value" id="changePercent">加载中...</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="btn" onclick="loadOptionInfo()">获取期权信息</button>
+                <button class="btn" onclick="loadMinuteData()">加载分时数据</button>
+                <button class="btn" onclick="loadKlineData()">加载K线数据</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>分时图表</h3>
+            <div id="chart" class="chart-container"></div>
+        </div>
+        
+        <div id="messageContainer"></div>
+    </div>
+
+    <script>
+        let chart = null;
+        const optionCode = '90005854';
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            loadOptionInfo();
+            loadMinuteData();
+        });
+        
+        // 初始化图表
+        function initChart() {
+            const chartDom = document.getElementById('chart');
+            chart = echarts.init(chartDom);
+        }
+        
+        // 加载期权信息
+        async function loadOptionInfo() {
+            try {
+                const response = await fetch(`http://localhost:9000/api/options/${optionCode}/info`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const info = data.info;
+                    document.getElementById('optionName').textContent = info.name;
+                    document.getElementById('currentPrice').textContent = info.current_price.toFixed(4);
+                    document.getElementById('changePercent').textContent = info.change_percent.toFixed(2) + '%';
+                    showMessage('期权信息加载成功', 'success');
+                } else {
+                    showMessage('期权信息加载失败', 'error');
+                }
+            } catch (error) {
+                showMessage('期权信息加载失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 加载分时数据
+        async function loadMinuteData() {
+            try {
+                showMessage('正在加载分时数据...', 'success');
+                
+                const response = await fetch(`http://localhost:9000/api/options/${optionCode}/minute`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    renderMinuteChart(data.data);
+                    showMessage(`分时数据加载完成，共${data.data.length}个数据点`, 'success');
+                } else {
+                    showMessage('分时数据加载失败', 'error');
+                }
+            } catch (error) {
+                showMessage('分时数据加载失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 加载K线数据
+        async function loadKlineData() {
+            try {
+                showMessage('正在加载K线数据...', 'success');
+                
+                const response = await fetch(`http://localhost:9000/api/options/${optionCode}/kline?period=daily&limit=30`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    renderKlineChart(data.data);
+                    showMessage(`K线数据加载完成，共${data.data.length}个数据点`, 'success');
+                } else {
+                    showMessage('K线数据加载失败', 'error');
+                }
+            } catch (error) {
+                showMessage('K线数据加载失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 渲染分时图 - 专门优化极低价期权
+        function renderMinuteChart(minuteData) {
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+            
+            // 计算价格统计信息
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+            
+            console.log(`价格统计: 最低=${minPrice.toFixed(4)}, 最高=${maxPrice.toFixed(4)}, 平均=${avgPrice.toFixed(4)}`);
+            
+            const option = {
+                title: {
+                    text: `90005854 中证500ETF沽9月1850 分时图`,
+                    textStyle: { color: '#fff' },
+                    left: 'center'
+                },
+                backgroundColor: '#1a1a1a',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#2a2a2a',
+                    borderColor: '#666',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        const time = params[0].axisValue;
+                        const price = params[0].value;
+                        const volume = params[1] ? params[1].value : 0;
+                        return `时间: ${time}<br/>价格: ${price.toFixed(4)}<br/>成交量: ${volume}`;
+                    }
+                },
+                grid: [
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '15%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '75%',
+                        bottom: '5%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: times,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30  // 每30个点显示一个时间标签
+                        },
+                        axisTick: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: times,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: false,  // 不自动缩放，显示从0开始
+                        min: 0,        // 强制从0开始
+                        max: Math.max(maxPrice * 1.1, 0.002),  // 确保有足够的显示空间
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            formatter: (value) => value.toFixed(4)
+                        },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { color: '#999' },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: '价格',
+                        type: 'line',
+                        data: prices,
+                        smooth: false,  // 不平滑，显示真实价格波动
+                        lineStyle: { color: '#1890ff', width: 2 },
+                        symbol: 'circle',
+                        symbolSize: 3,
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                    { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { 
+                            color: function(params) {
+                                // 根据价格变化设置成交量颜色
+                                const index = params.dataIndex;
+                                if (index > 0) {
+                                    const currentPrice = prices[index];
+                                    const prevPrice = prices[index - 1];
+                                    return currentPrice > prevPrice ? '#f5222d' : '#52c55a';
+                                }
+                                return '#52c55a';
+                            }
+                        }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+            
+            showMessage(`分时图渲染完成: 价格区间 ${minPrice.toFixed(4)} - ${maxPrice.toFixed(4)}`, 'success');
+        }
+        
+        // 渲染K线图
+        function renderKlineChart(klineData) {
+            const dates = klineData.map(item => item.date);
+            const candleData = klineData.map(item => [item.open, item.close, item.low, item.high]);
+            const volumes = klineData.map(item => item.volume);
+            
+            const option = {
+                title: {
+                    text: `90005854 K线图`,
+                    textStyle: { color: '#fff' },
+                    left: 'center'
+                },
+                backgroundColor: '#1a1a1a',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#2a2a2a',
+                    borderColor: '#666',
+                    textStyle: { color: '#fff' }
+                },
+                grid: [
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '15%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '75%',
+                        bottom: '5%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { color: '#999' },
+                        axisTick: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: dates,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { color: '#999' },
+                        axisTick: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: true,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            formatter: (value) => value.toFixed(4)
+                        },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { color: '#999' },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: candleData,
+                        itemStyle: {
+                            color: '#ef4444',
+                            color0: '#22c55e',
+                            borderColor: '#ef4444',
+                            borderColor0: '#22c55e'
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#52c41a' }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+        }
+        
+        // 显示消息
+        function showMessage(msg, type) {
+            const container = document.getElementById('messageContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = msg;
+            container.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                if (container.contains(messageDiv)) {
+                    container.removeChild(messageDiv);
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

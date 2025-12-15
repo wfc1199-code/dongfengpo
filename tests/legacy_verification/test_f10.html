@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>同花顺F10功能测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .test-section {
+            margin-bottom: 40px;
+        }
+        
+        .test-section h2 {
+            color: #444;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-section h2::before {
+            content: '🧪';
+        }
+        
+        /* 股票列表样式 */
+        .stock-list {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stock-item {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .stock-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stock-item.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .stock-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        .stock-code {
+            font-weight: bold;
+            font-size: 18px;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stock-item.selected .stock-code {
+            color: white;
+        }
+        
+        .stock-name {
+            font-size: 16px;
+            color: #333;
+        }
+        
+        .stock-item.selected .stock-name {
+            color: white;
+        }
+        
+        .stock-market {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        
+        .stock-item.selected .stock-market {
+            background: white;
+            color: #667eea;
+        }
+        
+        /* 右键菜单样式 */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 5px 0;
+            z-index: 1000;
+            display: none;
+            min-width: 200px;
+        }
+        
+        .context-menu.visible {
+            display: block;
+        }
+        
+        .context-menu-header {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eee;
+            font-weight: bold;
+            color: #333;
+            background: #f8f9fa;
+        }
+        
+        .context-menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        
+        .context-menu-item:hover {
+            background: #f0f0f0;
+        }
+        
+        .context-menu-divider {
+            height: 1px;
+            background: #eee;
+            margin: 5px 0;
+        }
+        
+        /* 按钮样式 */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #38a169;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+        
+        .btn-info {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+        }
+        
+        /* 测试结果区域 */
+        .test-result {
+            background: #f0f9ff;
+            border: 2px solid #90cdf4;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+        
+        .test-result h3 {
+            color: #2b6cb0;
+            margin-bottom: 10px;
+        }
+        
+        .result-item {
+            margin: 5px 0;
+            padding: 5px 10px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .result-success {
+            color: #22c55e;
+        }
+        
+        .result-error {
+            color: #ef4444;
+        }
+        
+        .result-warning {
+            color: #f59e0b;
+        }
+        
+        /* iframe测试区域 */
+        .iframe-test {
+            margin-top: 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .iframe-header {
+            background: #f3f4f6;
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        #f10-iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+        
+        .error-msg {
+            background: #fee;
+            color: #c00;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        
+        .success-msg {
+            background: #e6ffed;
+            color: #00882d;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>同花顺F10功能测试页面</h1>
+        <p class="description">
+            测试通过右键点击股票，访问同花顺F10页面的功能。<br>
+            URL格式：http://basic.10jqka.com.cn/{股票代码}/
+        </p>
+        
+        <!-- 测试1：股票列表右键菜单 -->
+        <div class="test-section">
+            <h2>测试1：股票列表右键菜单</h2>
+            <p style="color: #666; margin-bottom: 15px;">请右键点击下方股票，选择"查看F10资料"</p>
+            
+            <div class="stock-list" id="stockList">
+                <div class="stock-item" data-code="000001" data-name="平安银行">
+                    <div class="stock-info">
+                        <span class="stock-code">000001</span>
+                        <span class="stock-name">平安银行</span>
+                        <span class="stock-market">深市</span>
+                    </div>
+                </div>
+                <div class="stock-item" data-code="000002" data-name="万科A">
+                    <div class="stock-info">
+                        <span class="stock-code">000002</span>
+                        <span class="stock-name">万科A</span>
+                        <span class="stock-market">深市</span>
+                    </div>
+                </div>
+                <div class="stock-item" data-code="600519" data-name="贵州茅台">
+                    <div class="stock-info">
+                        <span class="stock-code">600519</span>
+                        <span class="stock-name">贵州茅台</span>
+                        <span class="stock-market">沪市</span>
+                    </div>
+                </div>
+                <div class="stock-item" data-code="600036" data-name="招商银行">
+                    <div class="stock-info">
+                        <span class="stock-code">600036</span>
+                        <span class="stock-name">招商银行</span>
+                        <span class="stock-market">沪市</span>
+                    </div>
+                </div>
+                <div class="stock-item" data-code="300750" data-name="宁德时代">
+                    <div class="stock-info">
+                        <span class="stock-code">300750</span>
+                        <span class="stock-name">宁德时代</span>
+                        <span class="stock-market">创业板</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 测试2：直接访问测试 -->
+        <div class="test-section">
+            <h2>测试2：直接访问F10页面</h2>
+            <p style="color: #666; margin-bottom: 15px;">点击按钮直接打开对应股票的F10页面</p>
+            
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="openF10Direct('000001')">
+                    打开平安银行F10
+                </button>
+                <button class="btn btn-primary" onclick="openF10Direct('600519')">
+                    打开贵州茅台F10
+                </button>
+                <button class="btn btn-primary" onclick="openF10Direct('300750')">
+                    打开宁德时代F10
+                </button>
+            </div>
+        </div>
+        
+        <!-- 测试3：URL格式测试 -->
+        <div class="test-section">
+            <h2>测试3：不同URL格式测试</h2>
+            <p style="color: #666; margin-bottom: 15px;">测试不同的URL格式是否能正常访问</p>
+            
+            <div class="btn-group">
+                <button class="btn btn-info" onclick="testURLFormats()">
+                    运行URL格式测试
+                </button>
+                <button class="btn btn-success" onclick="testBatchOpen()">
+                    批量打开测试
+                </button>
+            </div>
+            
+            <div id="urlTestResult" class="test-result" style="display: none;">
+                <h3>测试结果：</h3>
+                <div id="urlTestContent"></div>
+            </div>
+        </div>
+        
+        <!-- 测试4：iframe嵌入测试 -->
+        <div class="test-section">
+            <h2>测试4：iframe嵌入测试（可能被阻止）</h2>
+            <p style="color: #666; margin-bottom: 15px;">测试是否可以在iframe中嵌入F10页面</p>
+            
+            <div class="btn-group">
+                <button class="btn btn-info" onclick="testIframe('000001')">
+                    测试平安银行
+                </button>
+                <button class="btn btn-info" onclick="testIframe('600519')">
+                    测试贵州茅台
+                </button>
+                <button class="btn btn-success" onclick="clearIframe()">
+                    清除iframe
+                </button>
+            </div>
+            
+            <div id="iframeContainer" class="iframe-test" style="display: none;">
+                <div class="iframe-header">
+                    <span id="iframeTitle">加载中...</span>
+                    <button class="btn btn-sm" onclick="clearIframe()">关闭</button>
+                </div>
+                <div id="iframeContent">
+                    <iframe id="f10-iframe" src=""></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 右键菜单 -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-header" id="contextMenuHeader">
+            股票信息
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="openF10FromMenu()">
+            <span>📊</span>
+            <span>查看F10资料</span>
+        </div>
+        <div class="context-menu-item" onclick="openF10NewWindow()">
+            <span>🔗</span>
+            <span>新窗口打开F10</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="copyStockCode()">
+            <span>📋</span>
+            <span>复制股票代码</span>
+        </div>
+        <div class="context-menu-item" onclick="copyF10URL()">
+            <span>🔗</span>
+            <span>复制F10链接</span>
+        </div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="closeContextMenu()">
+            <span>❌</span>
+            <span>关闭菜单</span>
+        </div>
+    </div>
+    
+    <script>
+        // 当前选中的股票
+        let currentStock = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initStockList();
+            initContextMenu();
+        });
+        
+        // 初始化股票列表
+        function initStockList() {
+            const stockItems = document.querySelectorAll('.stock-item');
+            
+            stockItems.forEach(item => {
+                // 左键点击选中
+                item.addEventListener('click', function() {
+                    document.querySelectorAll('.stock-item').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    currentStock = {
+                        code: this.dataset.code,
+                        name: this.dataset.name
+                    };
+                    console.log('选中股票：', currentStock);
+                });
+                
+                // 右键菜单
+                item.addEventListener('contextmenu', function(e) {
+                    e.preventDefault();
+                    showContextMenu(e, this.dataset.code, this.dataset.name);
+                });
+            });
+        }
+        
+        // 初始化右键菜单
+        function initContextMenu() {
+            // 点击其他地方关闭菜单
+            document.addEventListener('click', function() {
+                closeContextMenu();
+            });
+            
+            // 阻止菜单自身的点击事件冒泡
+            document.getElementById('contextMenu').addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+        }
+        
+        // 显示右键菜单
+        function showContextMenu(e, code, name) {
+            const menu = document.getElementById('contextMenu');
+            const header = document.getElementById('contextMenuHeader');
+            
+            currentStock = { code, name };
+            header.textContent = `${code} - ${name}`;
+            
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+            menu.classList.add('visible');
+            
+            console.log('显示右键菜单：', currentStock);
+        }
+        
+        // 关闭右键菜单
+        function closeContextMenu() {
+            const menu = document.getElementById('contextMenu');
+            menu.classList.remove('visible');
+        }
+        
+        // 从菜单打开F10
+        function openF10FromMenu() {
+            if (currentStock) {
+                openF10Direct(currentStock.code);
+                closeContextMenu();
+            }
+        }
+        
+        // 新窗口打开F10
+        function openF10NewWindow() {
+            if (currentStock) {
+                const url = `http://basic.10jqka.com.cn/${currentStock.code}/`;
+                window.open(url, '_blank', 'width=1200,height=800');
+                closeContextMenu();
+            }
+        }
+        
+        // 复制股票代码
+        function copyStockCode() {
+            if (currentStock) {
+                navigator.clipboard.writeText(currentStock.code).then(() => {
+                    alert(`已复制股票代码：${currentStock.code}`);
+                    closeContextMenu();
+                });
+            }
+        }
+        
+        // 复制F10链接
+        function copyF10URL() {
+            if (currentStock) {
+                const url = `http://basic.10jqka.com.cn/${currentStock.code}/`;
+                navigator.clipboard.writeText(url).then(() => {
+                    alert(`已复制F10链接：${url}`);
+                    closeContextMenu();
+                });
+            }
+        }
+        
+        // 直接打开F10页面
+        function openF10Direct(code) {
+            const url = `http://basic.10jqka.com.cn/${code}/`;
+            console.log('打开F10页面：', url);
+            window.open(url, '_blank');
+        }
+        
+        // 测试URL格式
+        function testURLFormats() {
+            const testCases = [
+                { code: '000001', desc: '深市股票（6位）' },
+                { code: '600519', desc: '沪市股票（6位）' },
+                { code: '300750', desc: '创业板股票' },
+                { code: '688111', desc: '科创板股票' },
+                { code: 'SZ000001', desc: '带深市前缀' },
+                { code: 'SH600519', desc: '带沪市前缀' },
+            ];
+            
+            const resultDiv = document.getElementById('urlTestResult');
+            const contentDiv = document.getElementById('urlTestContent');
+            
+            resultDiv.style.display = 'block';
+            contentDiv.innerHTML = '';
+            
+            testCases.forEach(test => {
+                const url = `http://basic.10jqka.com.cn/${test.code}/`;
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <strong>${test.desc}:</strong> 
+                    <a href="${url}" target="_blank" style="color: #4299e1;">${url}</a>
+                    <span class="result-warning"> (点击测试)</span>
+                `;
+                contentDiv.appendChild(resultItem);
+            });
+            
+            const note = document.createElement('div');
+            note.style.marginTop = '10px';
+            note.style.color = '#666';
+            note.innerHTML = '<strong>注意：</strong>同花顺F10通常只接受纯数字股票代码，不需要市场前缀。';
+            contentDiv.appendChild(note);
+        }
+        
+        // 批量打开测试
+        function testBatchOpen() {
+            if (confirm('将打开3个新标签页进行测试，是否继续？')) {
+                const codes = ['000001', '600519', '300750'];
+                codes.forEach((code, index) => {
+                    setTimeout(() => {
+                        openF10Direct(code);
+                    }, index * 500); // 延迟打开，避免被浏览器阻止
+                });
+            }
+        }
+        
+        // 测试iframe嵌入
+        function testIframe(code) {
+            const container = document.getElementById('iframeContainer');
+            const iframe = document.getElementById('f10-iframe');
+            const title = document.getElementById('iframeTitle');
+            const content = document.getElementById('iframeContent');
+            
+            container.style.display = 'block';
+            title.textContent = `加载 ${code} F10资料...`;
+            
+            const url = `http://basic.10jqka.com.cn/${code}/`;
+            
+            // 先显示加载提示
+            content.innerHTML = '<div class="loading">正在加载F10页面...</div>';
+            
+            // 设置延迟加载iframe
+            setTimeout(() => {
+                content.innerHTML = `<iframe id="f10-iframe" src="${url}"></iframe>`;
+                
+                // 监听iframe加载
+                const newIframe = document.getElementById('f10-iframe');
+                newIframe.onload = function() {
+                    title.textContent = `${code} F10资料`;
+                    console.log('iframe加载成功');
+                };
+                
+                newIframe.onerror = function() {
+                    content.innerHTML = '<div class="error-msg">⚠️ 加载失败：可能由于跨域限制或X-Frame-Options设置，无法在iframe中显示。建议直接在新标签页中打开。</div>';
+                    console.error('iframe加载失败');
+                };
+            }, 100);
+            
+            // 检测跨域问题
+            setTimeout(() => {
+                try {
+                    const testAccess = document.getElementById('f10-iframe').contentWindow.document;
+                    content.innerHTML += '<div class="success-msg">✅ iframe加载成功，可以正常访问</div>';
+                } catch (e) {
+                    if (content.querySelector('.loading')) {
+                        content.innerHTML = '<div class="error-msg">⚠️ 由于同花顺网站的安全策略（X-Frame-Options或跨域限制），无法在iframe中显示F10页面。<br>建议使用"新标签页打开"方式查看。</div>';
+                    }
+                    console.error('跨域访问限制：', e);
+                }
+            }, 2000);
+        }
+        
+        // 清除iframe
+        function clearIframe() {
+            const container = document.getElementById('iframeContainer');
+            const content = document.getElementById('iframeContent');
+            
+            container.style.display = 'none';
+            content.innerHTML = '';
+        }
+        
+        // 页面加载完成提示
+        window.onload = function() {
+            console.log('✅ F10测试页面加载完成');
+            console.log('📝 使用说明：');
+            console.log('1. 右键点击股票列表中的项目');
+            console.log('2. 选择"查看F10资料"打开同花顺F10页面');
+            console.log('3. 使用测试按钮验证不同的访问方式');
+        };
+    </script>
+</body>
+</html>

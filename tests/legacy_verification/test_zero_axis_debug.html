@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>0轴调试 - 688155 先惠技术</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: white;
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        #chart {
+            flex: 1;
+            height: 600px;
+            border: 1px solid #333;
+        }
+        .info-panel {
+            width: 300px;
+            padding: 20px;
+            background: #222;
+            border-radius: 8px;
+        }
+        .info-item {
+            margin: 10px 0;
+            padding: 8px;
+            background: #333;
+            border-radius: 4px;
+        }
+        .correct { color: #4CAF50; }
+        .wrong { color: #FF4444; }
+        .highlight { 
+            background: #444; 
+            font-weight: bold;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #00bfff;
+        }
+    </style>
+</head>
+<body>
+    <h2>688155 先惠技术 - 0轴位置调试</h2>
+    <div class="container">
+        <div id="chart"></div>
+        <div class="info-panel">
+            <h3>关键数据</h3>
+            <div id="info"></div>
+            <div class="highlight">
+                <strong>正确的昨收价：53.31</strong><br>
+                0轴应该在此位置
+            </div>
+            <h3>Y轴计算</h3>
+            <div id="yaxis-info"></div>
+        </div>
+    </div>
+    
+    <script>
+        async function loadData() {
+            const response = await fetch('http://localhost:9000/api/stocks/688155/timeshare');
+            const data = await response.json();
+            
+            const yesterdayClose = data.yesterday_close;
+            const CORRECT_YESTERDAY_CLOSE = 53.31;
+            const timeshareData = data.timeshare_data || [];
+            
+            // 提取价格数据
+            const times = [];
+            const prices = [];
+            
+            timeshareData.forEach(item => {
+                times.push(item.time);
+                prices.push(item.price);
+            });
+            
+            // 计算Y轴范围
+            const allPrices = [...prices, yesterdayClose].filter(p => p > 0);
+            const maxPrice = Math.max(...allPrices);
+            const minPrice = Math.min(...allPrices);
+            
+            // 对称Y轴范围计算
+            const maxChange = Math.max(
+                Math.abs(maxPrice - yesterdayClose),
+                Math.abs(minPrice - yesterdayClose)
+            );
+            const symmetricMax = yesterdayClose + maxChange * 1.1;
+            const symmetricMin = yesterdayClose - maxChange * 1.1;
+            
+            // 显示信息
+            document.getElementById('info').innerHTML = `
+                <div class="info-item">
+                    <strong>API返回昨收:</strong> 
+                    <span class="${yesterdayClose === CORRECT_YESTERDAY_CLOSE ? 'correct' : 'wrong'}">
+                        ${yesterdayClose} ${yesterdayClose !== CORRECT_YESTERDAY_CLOSE ? '(错误!)' : '(正确)'}
+                    </span>
+                </div>
+                <div class="info-item">
+                    <strong>开盘价:</strong> ${data.open_price || 'N/A'}
+                </div>
+                <div class="info-item">
+                    <strong>当前价:</strong> ${prices[prices.length - 1]?.toFixed(2) || 'N/A'}
+                </div>
+                <div class="info-item">
+                    <strong>最高价:</strong> ${maxPrice.toFixed(2)}
+                </div>
+                <div class="info-item">
+                    <strong>最低价:</strong> ${minPrice.toFixed(2)}
+                </div>
+                <div class="info-item">
+                    <strong>涨跌幅:</strong> 
+                    <span class="${prices[prices.length - 1] >= yesterdayClose ? 'correct' : 'wrong'}">
+                        ${((prices[prices.length - 1] - yesterdayClose) / yesterdayClose * 100).toFixed(2)}%
+                    </span>
+                </div>
+            `;
+            
+            document.getElementById('yaxis-info').innerHTML = `
+                <div class="info-item">
+                    <strong>Y轴最小值:</strong> ${symmetricMin.toFixed(2)}
+                </div>
+                <div class="info-item">
+                    <strong>Y轴最大值:</strong> ${symmetricMax.toFixed(2)}
+                </div>
+                <div class="info-item">
+                    <strong>0轴位置:</strong> ${yesterdayClose.toFixed(2)}
+                </div>
+                <div class="info-item">
+                    <strong>0轴在Y轴的相对位置:</strong> 
+                    ${((yesterdayClose - symmetricMin) / (symmetricMax - symmetricMin) * 100).toFixed(1)}%
+                </div>
+            `;
+            
+            // 创建图表
+            const chart = echarts.init(document.getElementById('chart'));
+            
+            const option = {
+                title: {
+                    text: '分时图 - 0轴应该在53.31',
+                    textStyle: { color: '#fff' },
+                    left: 'center'
+                },
+                backgroundColor: '#1a1a1a',
+                grid: {
+                    left: 80,
+                    right: 80,
+                    top: 60,
+                    bottom: 40
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function(params) {
+                        const item = params[0];
+                        const price = item.value;
+                        const change = ((price - yesterdayClose) / yesterdayClose * 100).toFixed(2);
+                        return `
+                            时间: ${item.name}<br>
+                            价格: ${price.toFixed(2)}<br>
+                            涨跌幅: ${change >= 0 ? '+' : ''}${change}%<br>
+                            昨收: ${yesterdayClose}
+                        `;
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: times,
+                    axisLine: { lineStyle: { color: '#555' } },
+                    axisLabel: { 
+                        color: '#999',
+                        interval: 30
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        position: 'left',
+                        min: symmetricMin,
+                        max: symmetricMax,
+                        interval: (symmetricMax - symmetricMin) / 10,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: {
+                            color: '#999',
+                            formatter: value => value.toFixed(2)
+                        },
+                        splitLine: {
+                            lineStyle: { 
+                                color: '#333', 
+                                type: 'dashed' 
+                            }
+                        }
+                    },
+                    {
+                        type: 'value',
+                        position: 'right',
+                        min: symmetricMin,
+                        max: symmetricMax,
+                        interval: (symmetricMax - symmetricMin) / 10,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: {
+                            color: '#999',
+                            formatter: value => {
+                                const percent = ((value - yesterdayClose) / yesterdayClose * 100);
+                                return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
+                            }
+                        },
+                        splitLine: { show: false }
+                    }
+                ],
+                series: [{
+                    name: '分时价',
+                    type: 'line',
+                    data: prices,
+                    smooth: false,
+                    symbol: 'none',
+                    lineStyle: {
+                        color: '#00bfff',
+                        width: 2
+                    },
+                    areaStyle: {
+                        color: {
+                            type: 'linear',
+                            x: 0, y: 0, x2: 0, y2: 1,
+                            colorStops: [
+                                { offset: 0, color: 'rgba(0, 191, 255, 0.3)' },
+                                { offset: 1, color: 'rgba(0, 191, 255, 0.05)' }
+                            ]
+                        }
+                    },
+                    markLine: {
+                        silent: true,
+                        animation: false,
+                        symbol: 'none',
+                        data: [
+                            {
+                                yAxis: yesterdayClose,
+                                lineStyle: {
+                                    color: '#ffffff',
+                                    type: 'solid',
+                                    width: 2
+                                },
+                                label: {
+                                    show: true,
+                                    formatter: `昨收 ${yesterdayClose.toFixed(2)} (0.00%)`,
+                                    position: 'end',
+                                    color: '#ffffff',
+                                    backgroundColor: 'rgba(0,0,0,0.8)',
+                                    padding: [4, 8],
+                                    borderRadius: 4
+                                }
+                            },
+                            // 添加一条参考线显示正确的昨收价位置
+                            {
+                                yAxis: CORRECT_YESTERDAY_CLOSE,
+                                lineStyle: {
+                                    color: '#4CAF50',
+                                    type: 'dashed',
+                                    width: 1
+                                },
+                                label: {
+                                    show: true,
+                                    formatter: `正确昨收 ${CORRECT_YESTERDAY_CLOSE}`,
+                                    position: 'start',
+                                    color: '#4CAF50'
+                                }
+                            }
+                        ]
+                    }
+                }]
+            };
+            
+            chart.setOption(option);
+            
+            // 控制台输出
+            console.log('=== 0轴调试信息 ===');
+            console.log('API返回昨收价:', yesterdayClose);
+            console.log('正确的昨收价应该是:', CORRECT_YESTERDAY_CLOSE);
+            console.log('Y轴范围:', symmetricMin.toFixed(2), '-', symmetricMax.toFixed(2));
+            console.log('0轴位置:', yesterdayClose);
+            console.log('价格范围:', minPrice.toFixed(2), '-', maxPrice.toFixed(2));
+        }
+        
+        loadData();
+        
+        // 每3秒刷新一次
+        setInterval(loadData, 3000);
+    </script>
+</body>
+</html>

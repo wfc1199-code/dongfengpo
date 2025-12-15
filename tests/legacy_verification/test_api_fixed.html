@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API修复验证 - 涨停追踪系统</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #495057;
+        }
+        .btn {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 API修复验证测试</h1>
+            <p>验证旧API现在是否能正确返回数据</p>
+        </div>
+
+        <!-- 今日预测测试 -->
+        <div class="test-section">
+            <div class="test-title">📈 今日涨停预测 API</div>
+            <button class="btn" onclick="testTodayAPI()">测试 /api/limit-up-tracker/today</button>
+            <div id="todayResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- 二板候选测试 -->
+        <div class="test-section">
+            <div class="test-title">🚀 二板候选 API</div>
+            <button class="btn" onclick="testSecondBoardAPI()">测试 /api/limit-up-tracker/second-board-candidates</button>
+            <div id="secondResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- 连板梯队测试 -->
+        <div class="test-section">
+            <div class="test-title">🔄 连板梯队 API</div>
+            <button class="btn" onclick="testContinuousAPI()">测试 /api/limit-up-tracker/continuous-boards</button>
+            <div id="continuousResult" class="result" style="display: none;"></div>
+        </div>
+
+        <!-- 全部测试 -->
+        <div class="test-section">
+            <div class="test-title">⚡ 批量测试</div>
+            <button class="btn" onclick="testAllAPIs()" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);">测试所有API</button>
+            <div id="allResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        async function testTodayAPI() {
+            const resultDiv = document.getElementById('todayResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '🔄 测试中...';
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:8001/api/limit-up-tracker/today');
+                const data = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                if (data.code === 200) {
+                    const predictions = data.data.predictions || [];
+                    const emotion = data.data.market_emotion || {};
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 测试成功！</h4>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-number">${predictions.length}</div>
+                                <div>预测数量</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${emotion.high_prob_count || 0}</div>
+                                <div>高概率股票</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${responseTime}ms</div>
+                                <div>响应时间</div>
+                            </div>
+                        </div>
+                        <p><strong>消息:</strong> ${data.message}</p>
+                        <p><strong>首个股票:</strong> ${predictions[0]?.name || '无'} (${predictions[0]?.code || ''})</p>
+                    `;
+                } else {
+                    throw new Error(`API返回错误: ${data.message}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 测试失败: ${error.message}`;
+            }
+        }
+
+        async function testSecondBoardAPI() {
+            const resultDiv = document.getElementById('secondResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '🔄 测试中...';
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:8001/api/limit-up-tracker/second-board-candidates');
+                const data = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                if (data.code === 200) {
+                    const candidates = data.data.candidates || [];
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 测试成功！</h4>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-number">${candidates.length}</div>
+                                <div>候选数量</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${responseTime}ms</div>
+                                <div>响应时间</div>
+                            </div>
+                        </div>
+                        <p><strong>消息:</strong> ${data.message}</p>
+                        <p><strong>首个候选:</strong> ${candidates[0]?.name || '无'} (${candidates[0]?.code || ''})</p>
+                    `;
+                } else {
+                    throw new Error(`API返回错误: ${data.message}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 测试失败: ${error.message}`;
+            }
+        }
+
+        async function testContinuousAPI() {
+            const resultDiv = document.getElementById('continuousResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '🔄 测试中...';
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch('http://localhost:8001/api/limit-up-tracker/continuous-boards');
+                const data = await response.json();
+                const responseTime = Date.now() - startTime;
+                
+                if (data.code === 200) {
+                    const stocks = data.data.stocks || [];
+                    
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h4>✅ 测试成功！</h4>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-number">${stocks.length}</div>
+                                <div>连板股票</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number">${responseTime}ms</div>
+                                <div>响应时间</div>
+                            </div>
+                        </div>
+                        <p><strong>消息:</strong> ${data.message}</p>
+                        <p><strong>首个连板:</strong> ${stocks[0]?.name || '无'} (${stocks[0]?.boardDays || 0}板)</p>
+                    `;
+                } else {
+                    throw new Error(`API返回错误: ${data.message}`);
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 测试失败: ${error.message}`;
+            }
+        }
+
+        async function testAllAPIs() {
+            const resultDiv = document.getElementById('allResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '🔄 测试所有API...';
+            
+            let successCount = 0;
+            let totalTests = 3;
+            let results = [];
+            
+            try {
+                // 测试今日预测
+                const todayResponse = await fetch('http://localhost:8001/api/limit-up-tracker/today');
+                const todayData = await todayResponse.json();
+                if (todayData.code === 200) {
+                    successCount++;
+                    results.push(`✅ 今日预测: ${todayData.data.predictions.length} 只股票`);
+                } else {
+                    results.push(`❌ 今日预测: ${todayData.message}`);
+                }
+
+                // 测试二板候选
+                const secondResponse = await fetch('http://localhost:8001/api/limit-up-tracker/second-board-candidates');
+                const secondData = await secondResponse.json();
+                if (secondData.code === 200) {
+                    successCount++;
+                    results.push(`✅ 二板候选: ${secondData.data.candidates.length} 个候选`);
+                } else {
+                    results.push(`❌ 二板候选: ${secondData.message}`);
+                }
+
+                // 测试连板梯队
+                const continuousResponse = await fetch('http://localhost:8001/api/limit-up-tracker/continuous-boards');
+                const continuousData = await continuousResponse.json();
+                if (continuousData.code === 200) {
+                    successCount++;
+                    results.push(`✅ 连板梯队: ${continuousData.data.stocks.length} 只连板`);
+                } else {
+                    results.push(`❌ 连板梯队: ${continuousData.message}`);
+                }
+
+                resultDiv.className = 'result ' + (successCount === totalTests ? 'success' : 'info');
+                resultDiv.innerHTML = `
+                    <h4>📊 批量测试结果</h4>
+                    <div class="stats">
+                        <div class="stat-card">
+                            <div class="stat-number">${successCount}/${totalTests}</div>
+                            <div>成功率</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${(successCount/totalTests*100).toFixed(0)}%</div>
+                            <div>通过率</div>
+                        </div>
+                    </div>
+                    <div style="text-align: left; margin-top: 15px;">
+                        ${results.map(r => `<p>${r}</p>`).join('')}
+                    </div>
+                    ${successCount === totalTests ? 
+                        '<p><strong>🎉 所有API都已修复，前端现在应该能正常显示数据！</strong></p>' : 
+                        '<p><strong>⚠️ 部分API仍有问题，请检查服务器日志</strong></p>'
+                    }
+                `;
+
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `❌ 批量测试失败: ${error.message}`;
+            }
+        }
+
+        // 页面加载后自动运行测试
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('API修复验证页面加载完成');
+            setTimeout(() => {
+                testAllAPIs();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

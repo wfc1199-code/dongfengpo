@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>K线图分隔线测试修复版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        #chart {
+            width: 100%;
+            height: 600px;
+            background-color: #0d0d0d;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #444;
+        }
+        button.active {
+            background-color: #1890ff;
+            border-color: #1890ff;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #222;
+            border-radius: 4px;
+            border-left: 3px solid #1890ff;
+        }
+        .debug-log {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>K线图分隔线测试 - 修复版</h1>
+    
+    <div class="controls">
+        <button onclick="loadChart('5min')" id="btn5min">5分钟K线</button>
+        <button onclick="loadChart('15min')" id="btn15min">15分钟K线</button>
+        <button onclick="loadChart('daily')" id="btndaily">日K线</button>
+        <button onclick="toggleSeparators()">切换分隔线</button>
+        <button onclick="changeSeparatorStyle()">改变分隔线样式</button>
+    </div>
+
+    <div class="info">
+        <strong>当前图表：</strong><span id="chartType">5分钟K线</span><br>
+        <strong>分隔线状态：</strong><span id="separatorStatus">已启用</span><br>
+        <strong>分隔线样式：</strong><span id="separatorStyle">白色半透明虚线</span><br>
+        <strong>数据点数：</strong><span id="dataCount">0</span><br>
+        <strong>分隔线数量：</strong><span id="separatorCount">0</span>
+    </div>
+
+    <div id="chart"></div>
+    
+    <div class="debug-log" id="debugLog">
+        <strong>调试日志：</strong><br>
+    </div>
+
+    <script>
+        let myChart = null;
+        let currentType = '5min';
+        let showSeparators = true;
+        let separatorStyleIndex = 0;
+        
+        const separatorStyles = [
+            { color: 'rgba(255, 255, 255, 0.5)', type: 'dashed', width: 1, name: '白色半透明虚线' },
+            { color: 'rgba(255, 255, 255, 0.3)', type: 'dotted', width: 1, name: '白色点线' },
+            { color: 'rgba(255, 100, 100, 0.5)', type: 'dashed', width: 2, name: '红色虚线' },
+            { color: 'rgba(100, 255, 100, 0.5)', type: 'solid', width: 1, name: '绿色实线' },
+            { color: 'rgba(100, 100, 255, 0.8)', type: 'dashed', width: 1, name: '蓝色虚线' }
+        ];
+        
+        function addLog(message) {
+            const logDiv = document.getElementById('debugLog');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${time}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // 生成测试数据
+        function generateTestData(type) {
+            const data = [];
+            const basePrice = 100;
+            let currentDate = new Date('2025-01-06 09:30');
+            const minuteInterval = type === '5min' ? 5 : 15;
+            const totalDays = 5; // 5天数据
+            
+            addLog(`生成${type}测试数据...`);
+            
+            for (let day = 0; day < totalDays; day++) {
+                // 设置当天开盘时间
+                currentDate.setHours(9, 30, 0, 0);
+                
+                // 上午交易时段: 9:30-11:30
+                while (currentDate.getHours() < 11 || 
+                       (currentDate.getHours() === 11 && currentDate.getMinutes() <= 30)) {
+                    const price = basePrice + Math.random() * 10 - 5;
+                    data.push({
+                        date: formatDateTime(currentDate),
+                        open: price + Math.random() * 2 - 1,
+                        high: price + Math.random() * 2,
+                        low: price - Math.random() * 2,
+                        close: price + Math.random() * 2 - 1,
+                        volume: Math.floor(Math.random() * 1000000)
+                    });
+                    currentDate.setMinutes(currentDate.getMinutes() + minuteInterval);
+                }
+                
+                // 下午交易时段: 13:00-15:00
+                currentDate.setHours(13, 0, 0, 0);
+                while (currentDate.getHours() < 15) {
+                    const price = basePrice + Math.random() * 10 - 5;
+                    data.push({
+                        date: formatDateTime(currentDate),
+                        open: price + Math.random() * 2 - 1,
+                        high: price + Math.random() * 2,
+                        low: price - Math.random() * 2,
+                        close: price + Math.random() * 2 - 1,
+                        volume: Math.floor(Math.random() * 1000000)
+                    });
+                    currentDate.setMinutes(currentDate.getMinutes() + minuteInterval);
+                }
+                
+                // 移到下一天
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            addLog(`生成了${data.length}条数据，覆盖${totalDays}天`);
+            return data;
+        }
+        
+        function formatDateTime(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+        }
+        
+        // 生成分隔线
+        function generateDaySeparators(data, type) {
+            if (type === 'daily') {
+                addLog('日K线不需要分隔线');
+                return [];
+            }
+            
+            const separators = [];
+            let lastDate = null;
+            
+            addLog(`开始生成${type}分隔线...`);
+            
+            data.forEach((item, index) => {
+                // 提取日期部分
+                const currentDate = item.date.split(' ')[0];
+                
+                if (lastDate && currentDate !== lastDate) {
+                    addLog(`检测到日期变化: ${lastDate} -> ${currentDate} at index ${index}`);
+                    
+                    const style = separatorStyles[separatorStyleIndex];
+                    separators.push({
+                        xAxis: index,
+                        lineStyle: {
+                            color: style.color,
+                            type: style.type,
+                            width: style.width,
+                            opacity: 0.8
+                        },
+                        label: {
+                            show: false
+                        }
+                    });
+                }
+                lastDate = currentDate;
+            });
+            
+            addLog(`生成了${separators.length}条分隔线`);
+            return separators;
+        }
+        
+        function loadChart(type) {
+            currentType = type;
+            
+            // 更新按钮状态
+            document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn' + type).classList.add('active');
+            
+            // 更新信息显示
+            document.getElementById('chartType').textContent = 
+                type === '5min' ? '5分钟K线' : 
+                type === '15min' ? '15分钟K线' : '日K线';
+            
+            addLog(`加载${type}图表...`);
+            
+            // 生成测试数据
+            const testData = type === 'daily' ? generateDailyData() : generateTestData(type);
+            
+            // 准备图表数据
+            const dates = testData.map(item => item.date);
+            const ohlcData = testData.map(item => [
+                item.open,
+                item.close,
+                item.low,
+                item.high
+            ]);
+            const volumes = testData.map(item => item.volume);
+            
+            // 生成分隔线
+            const separators = showSeparators ? generateDaySeparators(testData, type) : [];
+            
+            // 更新信息
+            document.getElementById('dataCount').textContent = testData.length;
+            document.getElementById('separatorCount').textContent = separators.length;
+            
+            // 初始化图表
+            if (!myChart) {
+                myChart = echarts.init(document.getElementById('chart'));
+            }
+            
+            const option = {
+                title: {
+                    text: `测试股票 ${type === '5min' ? '5分钟' : type === '15min' ? '15分钟' : '日'}K线图`,
+                    left: 'center',
+                    textStyle: { color: '#fff', fontSize: 16 }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' }
+                },
+                grid: [
+                    { left: '5%', right: '5%', top: '10%', height: '60%' },
+                    { left: '5%', right: '5%', top: '75%', height: '15%' }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        axisLine: { lineStyle: { color: '#333' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            formatter: function(value) {
+                                // 对于分钟K线，只显示日期变化处
+                                if (type !== 'daily') {
+                                    const parts = value.split(' ');
+                                    const date = parts[0];
+                                    const time = parts[1];
+                                    // 只在每天第一条数据显示日期
+                                    if (time === '09:30') {
+                                        return date.substring(5); // 显示月-日
+                                    }
+                                    return '';
+                                }
+                                return value;
+                            }
+                        }
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: dates,
+                        axisLine: { lineStyle: { color: '#333' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: true,
+                        axisLine: { lineStyle: { color: '#333' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    },
+                    {
+                        type: 'value',
+                        scale: true,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#333' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { show: false }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: ohlcData,
+                        itemStyle: {
+                            color: '#ff4757',
+                            color0: '#2ed573',
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        },
+                        markLine: separators.length > 0 ? {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            data: separators
+                        } : {}
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#4ecdc4' },
+                        markLine: separators.length > 0 ? {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            data: separators
+                        } : {}
+                    }
+                ]
+            };
+            
+            myChart.setOption(option, true);
+            addLog('图表加载完成');
+        }
+        
+        function generateDailyData() {
+            const data = [];
+            const basePrice = 100;
+            let currentDate = new Date('2024-12-01');
+            
+            for (let i = 0; i < 30; i++) {
+                if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+                    const price = basePrice + Math.random() * 20 - 10;
+                    data.push({
+                        date: formatDate(currentDate),
+                        open: price + Math.random() * 2 - 1,
+                        high: price + Math.random() * 3,
+                        low: price - Math.random() * 3,
+                        close: price + Math.random() * 2 - 1,
+                        volume: Math.floor(Math.random() * 10000000)
+                    });
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            return data;
+        }
+        
+        function formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        
+        function toggleSeparators() {
+            showSeparators = !showSeparators;
+            document.getElementById('separatorStatus').textContent = 
+                showSeparators ? '已启用' : '已禁用';
+            addLog(`分隔线${showSeparators ? '启用' : '禁用'}`);
+            loadChart(currentType);
+        }
+        
+        function changeSeparatorStyle() {
+            separatorStyleIndex = (separatorStyleIndex + 1) % separatorStyles.length;
+            const style = separatorStyles[separatorStyleIndex];
+            document.getElementById('separatorStyle').textContent = style.name;
+            addLog(`切换分隔线样式为: ${style.name}`);
+            if (showSeparators) {
+                loadChart(currentType);
+            }
+        }
+        
+        // 初始加载
+        window.onload = function() {
+            addLog('页面加载完成');
+            loadChart('5min');
+        };
+        
+        // 窗口大小改变时重绘
+        window.onresize = function() {
+            if (myChart) {
+                myChart.resize();
+            }
+        };
+    </script>
+</body>
+</html>

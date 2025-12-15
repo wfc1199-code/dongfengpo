@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单滚动测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f0f;
+            color: #e5e5e5;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .header h1 {
+            color: #ff6b35;
+            margin: 0;
+            font-size: 20px;
+        }
+        
+        .debug-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            border-left: 4px solid #ff6b35;
+            font-family: monospace;
+            font-size: 11px;
+        }
+        
+        .stock-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        
+        .stock-list::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .stock-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+        }
+        
+        .stock-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(255, 107, 53, 0.8) 0%, rgba(255, 107, 53, 0.6) 100%);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+        }
+        
+        .stock-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(255, 107, 53, 1) 0%, rgba(255, 107, 53, 0.8) 100%);
+        }
+        
+        .scroll-hint {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .scroll-hint-text {
+            font-size: 11px;
+            color: #ff6b35;
+            font-weight: 500;
+        }
+        
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 6px;
+            border-left: 3px solid #ff6b35;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .stock-item:hover {
+            background: #1a1a1a;
+            border-color: rgba(255, 107, 53, 0.3);
+            transform: translateX(2px);
+        }
+        
+        .stock-info {
+            flex: 1;
+        }
+        
+        .stock-name {
+            font-weight: 600;
+            font-size: 12px;
+            color: #ffffff;
+            margin-bottom: 2px;
+        }
+        
+        .stock-code {
+            font-size: 10px;
+            color: #999;
+            font-family: monospace;
+        }
+        
+        .prediction-score {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            min-width: 30px;
+            text-align: center;
+        }
+        
+        .test-button {
+            background: rgba(255, 107, 53, 0.2);
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            border-radius: 4px;
+            color: #ff6b35;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 11px;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background: rgba(255, 107, 53, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 简单滚动测试</h1>
+            <p>测试股票列表滚动和点击功能</p>
+        </div>
+        
+        <div id="debugInfo" class="debug-info">
+            <div>🔄 准备测试...</div>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 15px;">
+            <button class="test-button" onclick="generateTestStocks(10)">生成10只测试股票</button>
+            <button class="test-button" onclick="generateTestStocks(20)">生成20只测试股票</button>
+            <button class="test-button" onclick="generateTestStocks(50)">生成50只测试股票</button>
+        </div>
+        
+        <div class="stock-list" id="stockList">
+            <div style="text-align: center; padding: 40px; color: #999;">
+                点击上方按钮生成测试股票
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debugInfo = [];
+        
+        function addDebugInfo(message) {
+            debugInfo.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+            updateDebugDisplay();
+        }
+        
+        function updateDebugDisplay() {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML = debugInfo.slice(-8).join('<br>');
+        }
+        
+        function generateTestStocks(count) {
+            addDebugInfo(`🔄 生成 ${count} 只测试股票...`);
+            
+            const stocks = Array.from({ length: count }, (_, i) => ({
+                code: `TEST${String(i + 1).padStart(3, '0')}`,
+                name: `测试股票${i + 1}`,
+                changePercent: 2 + Math.random() * 6,
+                predictionScore: 70 + Math.random() * 25
+            }));
+            
+            renderStocks(stocks);
+            addDebugInfo(`✅ 成功生成并渲染 ${count} 只股票`);
+        }
+        
+        function renderStocks(stocks) {
+            const stockList = document.getElementById('stockList');
+            
+            let html = '';
+            
+            if (stocks.length > 5) {
+                html += `
+                    <div class="scroll-hint">
+                        <span class="scroll-hint-text">📜 向下滚动查看更多股票 (${stocks.length}只)</span>
+                        <div style="font-size: 9px; color: #666; margin-top: 2px;">
+                            提示：使用鼠标滚轮或拖拽滚动条查看所有股票
+                        </div>
+                    </div>
+                `;
+            }
+            
+            stocks.forEach((stock, index) => {
+                html += `
+                    <div class="stock-item" onclick="handleStockClick('${stock.code}', '${stock.name}', ${index + 1}, ${stocks.length})">
+                        <div class="stock-info">
+                            <div class="stock-name">${stock.name}</div>
+                            <div class="stock-code">${stock.code} | 涨幅: ${stock.changePercent.toFixed(2)}%</div>
+                        </div>
+                        <div class="prediction-score">${stock.predictionScore.toFixed(0)}分</div>
+                    </div>
+                `;
+            });
+            
+            stockList.innerHTML = html;
+            
+            // 添加滚动事件监听
+            stockList.addEventListener('scroll', () => {
+                const scrollTop = stockList.scrollTop;
+                const scrollHeight = stockList.scrollHeight;
+                const clientHeight = stockList.clientHeight;
+                const scrollPercent = Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
+                
+                if (scrollPercent > 50 && scrollPercent % 20 === 0) {
+                    addDebugInfo(`📜 滚动进度: ${scrollPercent}%`);
+                }
+            });
+        }
+        
+        function handleStockClick(code, name, index, total) {
+            addDebugInfo(`🖱️ 点击股票: ${name} (${code}) - 第${index}/${total}只`);
+        }
+        
+        // 初始状态
+        addDebugInfo('✅ 页面加载完成，可以开始测试');
+    </script>
+</body>
+</html>

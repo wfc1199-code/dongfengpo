@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ECharts版本测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body { margin: 20px; background: #1a1a1a; color: white; }
+        #info { margin-bottom: 20px; }
+        #chart { width: 100%; height: 500px; background: #2a2a2a; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h2>ECharts markLine 测试</h2>
+        <p id="version"></p>
+    </div>
+    <div id="chart"></div>
+    
+    <script>
+        // 显示ECharts版本
+        document.getElementById('version').textContent = 'ECharts版本: ' + echarts.version;
+        
+        const chart = echarts.init(document.getElementById('chart'), 'dark');
+        
+        const dates = ['Day1', 'Day2', 'Day3', 'Day4', 'Day5', 'Day6', 'Day7', 'Day8'];
+        const data = [
+            [100, 102, 99, 103],
+            [102, 101, 100, 104],
+            [101, 103, 100, 105],
+            [103, 104, 102, 106],
+            [105, 107, 104, 108],
+            [107, 106, 105, 109],
+            [106, 108, 105, 110],
+            [108, 109, 107, 111]
+        ];
+        
+        const option = {
+            title: { text: '应该在Day5位置显示红色分隔线' },
+            xAxis: { type: 'category', data: dates },
+            yAxis: { type: 'value' },
+            series: [{
+                type: 'candlestick',
+                data: data,
+                markLine: {
+                    symbol: 'none',
+                    animation: false,
+                    data: [{
+                        xAxis: 4,
+                        lineStyle: {
+                            color: '#ff0000',
+                            type: 'solid',
+                            width: 3
+                        },
+                        label: {
+                            show: true,
+                            formatter: '分隔线',
+                            position: 'end'
+                        }
+                    }]
+                }
+            }]
+        };
+        
+        chart.setOption(option);
+        console.log('测试图表已设置，应该在索引4（Day5）位置显示红色分隔线');
+    </script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>F10资料查看器 - 优化版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .search-box { display: flex; gap: 10px; }
+        .search-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .search-btn {
+            padding: 10px 30px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .search-btn:hover { background: #40a9ff; }
+        .stock-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        .stock-name { font-size: 24px; font-weight: bold; }
+        .stock-code { font-size: 18px; color: #666; margin-left: 10px; }
+        .price-current { font-size: 32px; font-weight: bold; }
+        .price-up { color: #ff4757; }
+        .price-down { color: #10ac84; }
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: white;
+        }
+        .tab.active { background: #1890ff; color: white; }
+        .content-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: none;
+        }
+        .content-panel.active { display: block; }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .info-label { font-size: 14px; color: #666; margin-bottom: 5px; }
+        .info-value { font-size: 18px; font-weight: bold; color: #333; }
+        .loading { text-align: center; padding: 40px; color: #999; }
+        .error { color: #ff4d4f; padding: 20px; background: #fff2f0; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>F10 股票资料查看器</h1>
+            <div class="search-box">
+                <input type="text" class="search-input" id="stockInput" placeholder="请输入股票代码" value="688716">
+                <button class="search-btn" onclick="searchStock()">查询</button>
+            </div>
+        </div>
+        
+        <div class="stock-info" id="stockInfo">
+            <div class="stock-header">
+                <div>
+                    <span class="stock-name" id="stockName">--</span>
+                    <span class="stock-code" id="stockCode">--</span>
+                </div>
+                <div>
+                    <div class="price-current" id="currentPrice">--</div>
+                    <div id="priceChange">--</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('basic', this)">公司概况</button>
+            <button class="tab" onclick="switchTab('finance', this)">财务数据</button>
+            <button class="tab" onclick="switchTab('holders', this)">股东信息</button>
+            <button class="tab" onclick="switchTab('news', this)">最新公告</button>
+        </div>
+        
+        <div class="content-panel active" id="basic">
+            <h3>公司基本信息</h3>
+            <div class="info-grid" id="basicInfo">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="finance">
+            <h3>财务数据</h3>
+            <div id="financeInfo">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="holders">
+            <h3>股东信息</h3>
+            <div id="holdersInfo">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+        
+        <div class="content-panel" id="news">
+            <h3>最新公告</h3>
+            <div id="newsInfo">
+                <div class="loading">加载中...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let currentStock = '';
+        let currentTab = 'basic';
+        
+        async function searchStock() {
+            const stockCode = document.getElementById('stockInput').value.trim();
+            if (!stockCode) {
+                alert('请输入股票代码');
+                return;
+            }
+            
+            currentStock = stockCode;
+            console.log('查询股票:', stockCode);
+            
+            // 获取基本信息
+            try {
+                const response = await fetch(`http://localhost:9000/api/f10v2/basic/${stockCode}`);
+                const data = await response.json();
+                console.log('基本信息:', data);
+                
+                if (data.code === 200 && data.data) {
+                    const info = data.data;
+                    document.getElementById('stockName').textContent = info.name || '未知';
+                    document.getElementById('stockCode').textContent = stockCode;
+                    document.getElementById('currentPrice').textContent = info.price || '--';
+                    
+                    const changeEl = document.getElementById('priceChange');
+                    const change = parseFloat(info.change || 0);
+                    changeEl.textContent = `${change >= 0 ? '+' : ''}${info.change} (${change >= 0 ? '+' : ''}${info.change_pct}%)`;
+                    changeEl.className = change >= 0 ? 'price-up' : 'price-down';
+                    
+                    // 更新基本信息面板
+                    let html = '';
+                    const fields = {
+                        '股票代码': info.code,
+                        '股票名称': info.name,
+                        '所属行业': info.industry,
+                        '最新价': info.price,
+                        '涨跌额': info.change,
+                        '涨跌幅': info.change_pct + '%',
+                        '成交量': (info.volume / 10000).toFixed(2) + '万',
+                        '成交额': info.amount + '万',
+                        '总市值': info.market_cap + '亿',
+                        '市盈率': info.pe,
+                        '市净率': info.pb,
+                        '主营业务': info.main_business
+                    };
+                    
+                    for (const [key, value] of Object.entries(fields)) {
+                        html += `
+                            <div class="info-item">
+                                <div class="info-label">${key}</div>
+                                <div class="info-value">${value || '--'}</div>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('basicInfo').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                document.getElementById('basicInfo').innerHTML = 
+                    `<div class="error">获取数据失败: ${error.message}</div>`;
+            }
+            
+            // 加载当前标签数据
+            loadTabData(currentTab);
+        }
+        
+        function switchTab(tab, element) {
+            currentTab = tab;
+            
+            // 切换标签样式
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+            
+            // 切换内容面板
+            document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(tab).classList.add('active');
+            
+            // 加载数据
+            if (currentStock) {
+                loadTabData(tab);
+            }
+        }
+        
+        async function loadTabData(tab) {
+            if (!currentStock) return;
+            
+            try {
+                const response = await fetch(`http://localhost:9000/api/f10v2/${tab}/${currentStock}`);
+                const data = await response.json();
+                console.log(`${tab}数据:`, data);
+                
+                if (tab === 'finance' && data.data) {
+                    let html = '<div class="info-grid">';
+                    const finData = data.data[0] || {};
+                    for (const [key, value] of Object.entries(finData)) {
+                        if (key !== 'period') {
+                            const label = {
+                                'revenue': '营业收入',
+                                'net_profit': '净利润',
+                                'eps': '每股收益',
+                                'roe': 'ROE',
+                                'gross_margin': '毛利率',
+                                'net_margin': '净利率',
+                                'debt_ratio': '负债率',
+                                'bvps': '每股净资产'
+                            }[key] || key;
+                            
+                            html += `
+                                <div class="info-item">
+                                    <div class="info-label">${label}</div>
+                                    <div class="info-value">${value || '--'}</div>
+                                </div>
+                            `;
+                        }
+                    }
+                    html += '</div>';
+                    document.getElementById('financeInfo').innerHTML = html;
+                }
+                
+                if (tab === 'holders' && data.data) {
+                    document.getElementById('holdersInfo').innerHTML = 
+                        '<div class="info-item">股东数据暂不可用</div>';
+                }
+                
+                if (tab === 'news' && data.data) {
+                    document.getElementById('newsInfo').innerHTML = 
+                        '<div class="info-item">公告数据暂不可用</div>';
+                }
+                
+            } catch (error) {
+                console.error(`加载${tab}数据失败:`, error);
+            }
+        }
+        
+        // 页面加载时自动查询
+        window.onload = function() {
+            // 从URL参数获取股票代码
+            const urlParams = new URLSearchParams(window.location.search);
+            const codeFromUrl = urlParams.get('code');
+            
+            if (codeFromUrl) {
+                // 处理股票代码格式（去掉市场前缀）
+                let stockCode = codeFromUrl;
+                if (stockCode.startsWith('sh') || stockCode.startsWith('sz')) {
+                    stockCode = stockCode.substring(2);
+                } else if (stockCode.startsWith('hk')) {
+                    stockCode = stockCode.substring(2);
+                }
+                
+                document.getElementById('stockInput').value = stockCode;
+            }
+            
+            searchStock();
+        };
+    </script>
+</body>
+</html>

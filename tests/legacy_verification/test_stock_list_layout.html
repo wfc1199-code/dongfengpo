@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票列表布局测试</title>
+    <style>
+        body {
+            background-color: #000000;
+            color: #e5e5e5;
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .test-container {
+            max-width: 320px;
+            background-color: #111111;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .stock-item-inline {
+            background-color: #2a2a2a;
+            border-radius: 4px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+            display: flex !important;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            min-height: 40px;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            margin-bottom: 2px;
+        }
+        
+        .stock-item-inline:hover {
+            background-color: #333;
+            border-color: #555;
+        }
+        
+        .stock-code {
+            font-weight: bold;
+            color: #fff;
+            font-size: 12px;
+            flex: 0 0 55px;
+            min-width: 55px;
+            max-width: 55px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .stock-name {
+            color: #e5e5e5;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+            flex: 0 1 auto;
+            min-width: 40px;
+            max-width: 80px;
+        }
+        
+        .stock-price {
+            font-weight: bold;
+            color: #fff;
+            font-size: 12px;
+            text-align: right;
+            flex: 0 0 45px;
+            min-width: 35px;
+            max-width: 45px;
+            white-space: nowrap;
+        }
+        
+        .stock-change {
+            font-size: 11px;
+            font-weight: 600;
+            text-align: right;
+            white-space: nowrap;
+            flex: 0 0 65px;
+            min-width: 55px;
+            max-width: 65px;
+        }
+        
+        .stock-turnover {
+            font-size: 11px;
+            color: #e0e0e0;
+            font-weight: 500;
+            text-align: right;
+            white-space: nowrap;
+            flex: 0 0 50px;
+            min-width: 40px;
+            max-width: 50px;
+        }
+        
+        .positive { color: #00d4aa; }
+        .negative { color: #ff4444; }
+        .neutral { color: #ccc; }
+        
+        .test-header {
+            color: #ff6b35;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>股票列表布局重叠问题修复测试</h1>
+    
+    <div class="test-header">修复后的股票列表布局：</div>
+    
+    <div class="test-container">
+        <div class="stock-item-inline">
+            <span class="stock-code">000001</span>
+            <span class="stock-name">平安银行</span>
+            <span class="stock-price positive">12.45</span>
+            <span class="stock-change positive">+0.25 (+2.05%)</span>
+            <span class="stock-turnover">1.2%</span>
+        </div>
+        
+        <div class="stock-item-inline">
+            <span class="stock-code">600519</span>
+            <span class="stock-name">贵州茅台</span>
+            <span class="stock-price negative">1845.00</span>
+            <span class="stock-change negative">-15.50 (-0.83%)</span>
+            <span class="stock-turnover">0.8%</span>
+        </div>
+        
+        <div class="stock-item-inline">
+            <span class="stock-code">000858</span>
+            <span class="stock-name">五粮液</span>
+            <span class="stock-price positive">168.88</span>
+            <span class="stock-change positive">+2.88 (+1.74%)</span>
+            <span class="stock-turnover">2.1%</span>
+        </div>
+        
+        <div class="stock-item-inline">
+            <span class="stock-code">002415</span>
+            <span class="stock-name">海康威视</span>
+            <span class="stock-price neutral">32.15</span>
+            <span class="stock-change neutral">+0.00 (0.00%)</span>
+            <span class="stock-turnover">1.5%</span>
+        </div>
+        
+        <div class="stock-item-inline">
+            <span class="stock-code">02228</span>
+            <span class="stock-name">晶泰控股 <span style="color: #ff9800; font-size: 10px;">(HK)</span></span>
+            <span class="stock-price positive">45.20</span>
+            <span class="stock-change positive">+1.20 (+2.73%)</span>
+            <span class="stock-turnover">3.2%</span>
+        </div>
+        
+        <div class="stock-item-inline">
+            <span class="stock-code">300999</span>
+            <span class="stock-name">金龙鱼</span>
+            <span class="stock-price negative">58.76</span>
+            <span class="stock-change negative">-0.94 (-1.57%)</span>
+            <span class="stock-turnover">0.9%</span>
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px; color: #888; font-size: 12px;">
+        <h3 style="color: #00d4aa;">修复内容：</h3>
+        <ul>
+            <li>使用Flexbox替代Grid布局，避免元素重叠</li>
+            <li>为每个元素设置固定的flex属性和宽度限制</li>
+            <li>股票代码：固定55px宽度</li>
+            <li>股票名称：最大80px，支持文本截断</li>
+            <li>价格：固定45px宽度，右对齐</li>
+            <li>涨跌：固定65px宽度，右对齐</li>
+            <li>换手率：固定50px宽度，右对齐</li>
+            <li>添加overflow:hidden防止内容溢出</li>
+        </ul>
+    </div>
+</body>
+</html>

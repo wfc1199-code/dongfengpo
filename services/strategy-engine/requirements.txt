@@ -1,0 +1,5 @@
+-e ../../libs/data_contracts
+-e ../../libs/strategy-sdk
+redis==5.0.1
+pydantic==2.5.3
+pydantic-settings==2.0.3

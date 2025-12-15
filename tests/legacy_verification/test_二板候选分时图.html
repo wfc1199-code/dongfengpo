@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试明日二板候选分时图</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #1a1a1a; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .test-section { margin: 20px 0; border: 1px solid #333; padding: 20px; }
+        .candidate-card { 
+            background: #2a2a2a; 
+            border: 1px solid #444; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .candidate-card:hover { background: #333; }
+        .stock-chart { 
+            width: 100%; 
+            height: 500px; 
+            background: #222; 
+            border: 1px solid #444; 
+            margin: 20px 0;
+            position: relative;
+        }
+        .chart-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            font-size: 16px;
+        }
+        button { 
+            background: #0088cc; 
+            color: white; 
+            border: none; 
+            padding: 8px 16px; 
+            border-radius: 4px; 
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0099dd; }
+        .selected { background: #004466 !important; }
+        .loading { color: #00cc88; }
+        .error { color: #cc4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>测试明日二板候选分时图功能</h1>
+        
+        <div class="test-section">
+            <h2>1. 获取候选股票列表</h2>
+            <button onclick="fetchCandidates()">获取二板候选</button>
+            <div id="candidates-list"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. 股票分时图显示</h2>
+            <div>当前选择: <span id="selected-stock">未选择</span></div>
+            <div id="stock-chart" class="stock-chart">
+                <div class="chart-placeholder">请选择股票查看分时图</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. 测试日志</h2>
+            <div id="test-log" style="background: #111; padding: 10px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: scroll;"></div>
+        </div>
+    </div>
+
+    <script>
+        let candidates = [];
+        let selectedStockCode = '';
+
+        function log(message) {
+            const logDiv = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function fetchCandidates() {
+            log('开始获取二板候选数据...');
+            try {
+                const response = await fetch('http://localhost:9000/api/limit-up-tracker/second-board-candidates');
+                if (response.ok) {
+                    const result = await response.json();
+                    candidates = result.data?.candidates || [];
+                    log(`✅ 获取到 ${candidates.length} 只候选股票`);
+                    renderCandidates();
+                } else {
+                    log(`❌ API响应错误: ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ 获取候选股票失败: ${error.message}`);
+            }
+        }
+
+        function renderCandidates() {
+            const container = document.getElementById('candidates-list');
+            if (candidates.length === 0) {
+                container.innerHTML = '<p>暂无候选股票</p>';
+                return;
+            }
+
+            container.innerHTML = candidates.map(candidate => `
+                <div class="candidate-card" onclick="selectStock('${candidate.code}', '${candidate.name}')">
+                    <strong>${candidate.name} (${candidate.code})</strong>
+                    <div>概率: ${candidate.probability}% | 首板: ${candidate.firstBoardTime} | 封单: ${candidate.sealAmount}亿</div>
+                    <div style="color: #999;">${candidate.reason}</div>
+                </div>
+            `).join('');
+        }
+
+        async function selectStock(code, name) {
+            selectedStockCode = code;
+            document.getElementById('selected-stock').textContent = `${name} (${code})`;
+            log(`选择股票: ${name} (${code})`);
+            
+            // 高亮选中的股票
+            document.querySelectorAll('.candidate-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.target.closest('.candidate-card').classList.add('selected');
+            
+            await loadStockChart(code, name);
+        }
+
+        async function loadStockChart(code, name) {
+            const chartDiv = document.getElementById('stock-chart');
+            chartDiv.innerHTML = '<div class="chart-placeholder loading">正在加载分时数据...</div>';
+            
+            log(`开始获取 ${code} 的分时数据...`);
+            
+            try {
+                // 测试分时数据接口
+                const response = await fetch(`http://localhost:9000/api/stocks/${code}/timeshare`);
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ 获取到分时数据，数据点: ${data.timeshare_data?.length || 0}`);
+                    renderChart(data, name);
+                } else {
+                    log(`❌ 获取分时数据失败: ${response.status}`);
+                    chartDiv.innerHTML = '<div class="chart-placeholder error">获取数据失败</div>';
+                }
+            } catch (error) {
+                log(`❌ 分时数据请求异常: ${error.message}`);
+                chartDiv.innerHTML = '<div class="chart-placeholder error">网络错误</div>';
+            }
+        }
+
+        function renderChart(data, name) {
+            const chartDiv = document.getElementById('stock-chart');
+            
+            // 简化显示，实际应用中应该使用ECharts渲染
+            const timeshareData = data.timeshare_data || [];
+            const currentPrice = data.current_price || 0;
+            const yesterdayClose = data.yesterday_close || 0;
+            const changePercent = data.change_percent || 0;
+            
+            chartDiv.innerHTML = `
+                <div style="padding: 20px;">
+                    <h3>${name} 分时数据</h3>
+                    <div style="margin: 10px 0;">
+                        <strong>现价:</strong> ${currentPrice} 
+                        <strong>昨收:</strong> ${yesterdayClose}
+                        <strong>涨跌幅:</strong> <span style="color: ${changePercent >= 0 ? '#ff4757' : '#2ed573'}">${changePercent >= 0 ? '+' : ''}${changePercent}%</span>
+                    </div>
+                    <div style="margin: 10px 0;">
+                        <strong>数据点数量:</strong> ${timeshareData.length}
+                    </div>
+                    <div style="margin: 10px 0; font-size: 12px; color: #999;">
+                        <strong>最新几个数据点:</strong>
+                        <pre>${JSON.stringify(timeshareData.slice(-5), null, 2)}</pre>
+                    </div>
+                    <div style="margin: 20px 0; color: #00cc88;">
+                        ✅ 数据获取成功，前端图表组件应该能正常渲染此数据
+                    </div>
+                </div>
+            `;
+        }
+
+        // 页面加载时自动获取候选数据
+        window.onload = function() {
+            log('页面加载完成，开始测试...');
+            fetchCandidates();
+        };
+    </script>
+</body>
+</html>

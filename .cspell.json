@@ -1,0 +1,39 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "BMAD",
+    "fastapi",
+    "FastAPI",
+    "eastmoney",
+    "Eastmoney",
+    "Pydantic",
+    "pydantic",
+    "pytest",
+    "asyncio",
+    "akshare",
+    "Akshare",
+    "uvicorn",
+    "HTTPException",
+    "APIRouter",
+    "BaseModule",
+    "Pydantic",
+    "subprocess",
+    "UnicodeDecodeError",
+    "SubprocessError",
+    "ThreadPoolExecutor",
+    "concurrent",
+    "futures"
+  ],
+  "ignoreWords": [],
+  "flagWords": [],
+  "ignorePaths": [
+    "node_modules/**",
+    "venv/**",
+    "**/__pycache__/**",
+    "*.pyc",
+    ".git/**",
+    "*.log"
+  ]
+}
+

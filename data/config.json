@@ -1,0 +1,19 @@
+{
+  "refresh_interval": 10,
+  "anomaly_threshold": 0.5,
+  "volume_threshold": 2.0,
+  "monitoring_stocks": [],
+  "user_customization": {
+    "自定义监控": {
+      "自选股票池": [
+        "300109",
+        "603538", 
+        "603823",
+        "002406"
+      ],
+      "自选期权池": [
+        "90005854"
+      ]
+    }
+  }
+}

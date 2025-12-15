@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>时间分层修复验证</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif; 
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 30px; 
+        }
+        .test-section { 
+            margin: 20px 0; 
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .api-data { 
+            background: #e8f5e8; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .time-distribution { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 15px; 
+            margin: 20px 0;
+        }
+        .time-slot { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border: 1px solid #ddd;
+        }
+        .slot-header { 
+            font-weight: bold; 
+            margin-bottom: 10px; 
+            color: #333;
+        }
+        .stock-item { 
+            padding: 8px; 
+            margin: 5px 0; 
+            background: #f0f8ff; 
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .btn { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        .btn:hover { 
+            background: #0056b3; 
+        }
+        .status { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px;
+        }
+        .success { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
+        }
+        .error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb;
+        }
+        .loading { 
+            background: #d1ecf1; 
+            color: #0c5460; 
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 时间分层涨停预测 - 修复验证</h1>
+            <p>验证修复后的数据准确性和时间分层逻辑</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 API数据测试</h3>
+            <button class="btn" onclick="testApiData()">测试API数据</button>
+            <button class="btn" onclick="testTimeDistribution()">测试时间分层</button>
+            <button class="btn" onclick="openMainPage()">打开主页面</button>
+            <div id="apiStatus" class="status loading">等待测试...</div>
+            <div id="apiData" class="api-data" style="display:none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>⏰ 时间分层结果</h3>
+            <div id="timeDistribution" class="time-distribution">
+                <!-- 时间分层结果将在这里显示 -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📈 数据质量验证</h3>
+            <div id="dataQuality">
+                <!-- 数据质量报告将在这里显示 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 时间段定义
+        const timeSlots = [
+            { start: '09:30', end: '09:45', label: '🚀 开盘冲刺' },
+            { start: '09:45', end: '10:00', label: '🎯 趋势确认' },
+            { start: '10:00', end: '10:30', label: '⭐ 黄金决策' },
+            { start: '10:30', end: '11:00', label: '📈 强势延续' },
+            { start: '11:00', end: '11:30', label: '🔍 午前观察' },
+            { start: '13:00', end: '14:00', label: '🌟 午后发力' },
+            { start: '14:00', end: '14:30', label: '💪 尾盘冲刺' },
+            { start: '14:30', end: '15:00', label: '🎨 封板决战' }
+        ];
+
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+
+        function isTimeInSlot(time, slot) {
+            if (!time) return false;
+            const timeMinutes = timeToMinutes(time);
+            const startMinutes = timeToMinutes(slot.start);
+            const endMinutes = timeToMinutes(slot.end);
+            return timeMinutes >= startMinutes && timeMinutes < endMinutes;
+        }
+
+        async function testApiData() {
+            const statusDiv = document.getElementById('apiStatus');
+            const dataDiv = document.getElementById('apiData');
+            
+            try {
+                statusDiv.className = 'status loading';
+                statusDiv.textContent = '🔄 正在获取API数据...';
+                
+                const response = await fetch('http://localhost:9000/api/limit-up-tracker/today?refresh=true');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data && data.data.predictions) {
+                    const predictions = data.data.predictions;
+                    
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = `✅ 成功获取 ${predictions.length} 只股票数据`;
+                    
+                    // 显示前5只股票的详细数据
+                    let apiDataHtml = '<h4>前5只股票数据样本:</h4>';
+                    predictions.slice(0, 5).forEach((stock, index) => {
+                        apiDataHtml += `
+                            <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                                <strong>${index + 1}. ${stock.name} (${stock.code})</strong><br>
+                                选出时间: ${stock.sealTime || 'N/A'}<br>
+                                涨幅: ${stock.changePercent || 0}%<br>
+                                成交额: ${((stock.amount || 0) / 10000).toFixed(1)}亿<br>
+                                换手率: ${stock.turnoverRate || 0}%<br>
+                                预测分数: ${stock.predictionScore || 0}分
+                            </div>
+                        `;
+                    });
+                    
+                    dataDiv.innerHTML = apiDataHtml;
+                    dataDiv.style.display = 'block';
+                    
+                    // 存储数据供其他测试使用
+                    window.testData = predictions;
+                    
+                } else {
+                    throw new Error('数据格式不正确');
+                }
+                
+            } catch (error) {
+                console.error('API测试失败:', error);
+                statusDiv.className = 'status error';
+                statusDiv.textContent = `❌ API测试失败: ${error.message}`;
+                dataDiv.style.display = 'none';
+            }
+        }
+
+        function testTimeDistribution() {
+            if (!window.testData) {
+                alert('请先执行API数据测试');
+                return;
+            }
+
+            const distributionDiv = document.getElementById('timeDistribution');
+            const qualityDiv = document.getElementById('dataQuality');
+            
+            // 按时间段分组股票
+            const groupedStocks = timeSlots.map(() => []);
+            let unclassified = [];
+            
+            window.testData.forEach(stock => {
+                let classified = false;
+                for (let i = 0; i < timeSlots.length; i++) {
+                    if (isTimeInSlot(stock.sealTime, timeSlots[i])) {
+                        groupedStocks[i].push(stock);
+                        classified = true;
+                        break;
+                    }
+                }
+                if (!classified) {
+                    unclassified.push(stock);
+                }
+            });
+
+            // 显示时间分层结果
+            let distributionHtml = '';
+            timeSlots.forEach((slot, index) => {
+                const stocks = groupedStocks[index];
+                distributionHtml += `
+                    <div class="time-slot">
+                        <div class="slot-header">${slot.label}<br>${slot.start}-${slot.end} (${stocks.length}只)</div>
+                        ${stocks.length > 0 ? 
+                            stocks.slice(0, 3).map(stock => `
+                                <div class="stock-item">
+                                    ${stock.name} (${stock.code})<br>
+                                    选出: ${stock.sealTime} | 涨幅: ${stock.changePercent}%
+                                </div>
+                            `).join('') + (stocks.length > 3 ? `<div class="stock-item">...还有${stocks.length - 3}只</div>` : '')
+                            : '<div class="stock-item" style="color: #666;">暂无股票</div>'
+                        }
+                    </div>
+                `;
+            });
+
+            distributionDiv.innerHTML = distributionHtml;
+
+            // 生成数据质量报告
+            const totalStocks = window.testData.length;
+            const classifiedStocks = totalStocks - unclassified.length;
+            const classificationRate = (classifiedStocks / totalStocks * 100).toFixed(1);
+            
+            const avgChangePercent = (window.testData.reduce((sum, stock) => sum + (stock.changePercent || 0), 0) / totalStocks).toFixed(2);
+            const avgPredictionScore = (window.testData.reduce((sum, stock) => sum + (stock.predictionScore || 0), 0) / totalStocks).toFixed(1);
+            
+            qualityDiv.innerHTML = `
+                <h4>📊 数据质量报告</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 8px;">
+                        <strong>总股票数</strong><br>
+                        <span style="font-size: 24px; color: #28a745;">${totalStocks}</span>只
+                    </div>
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 8px;">
+                        <strong>时间分类率</strong><br>
+                        <span style="font-size: 24px; color: #1976d2;">${classificationRate}%</span>
+                    </div>
+                    <div style="background: #fff3e0; padding: 15px; border-radius: 8px;">
+                        <strong>平均涨幅</strong><br>
+                        <span style="font-size: 24px; color: #f57c00;">${avgChangePercent}%</span>
+                    </div>
+                    <div style="background: #fce4ec; padding: 15px; border-radius: 8px;">
+                        <strong>平均预测分数</strong><br>
+                        <span style="font-size: 24px; color: #c2185b;">${avgPredictionScore}分</span>
+                    </div>
+                </div>
+                ${unclassified.length > 0 ? `
+                    <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                        <strong>⚠️ 未分类股票 (${unclassified.length}只):</strong><br>
+                        ${unclassified.slice(0, 5).map(stock => `${stock.name}(${stock.sealTime})`).join(', ')}
+                        ${unclassified.length > 5 ? '...' : ''}
+                    </div>
+                ` : ''}
+            `;
+        }
+
+        function openMainPage() {
+            window.open('http://localhost:8080/时间分层涨停预测.html', '_blank');
+        }
+
+        // 页面加载时自动运行测试
+        document.addEventListener('DOMContentLoaded', function() {
+            testApiData();
+        });
+    </script>
+</body>
+</html>

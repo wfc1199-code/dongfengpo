@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>涨停板API测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ef4444;
+            padding-bottom: 10px;
+        }
+        .api-test {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .api-test h2 {
+            color: #ef4444;
+            margin-top: 0;
+        }
+        button {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #dc2626;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border-left: 3px solid #ef4444;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            border-left-color: #dc2626;
+            background: #fef2f2;
+            color: #dc2626;
+        }
+        .success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        .loading {
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 涨停板API测试面板</h1>
+    
+    <div class="api-test">
+        <h2>1. 今日涨停板数据</h2>
+        <button onclick="testTodayLimitUp()">测试 /api/limit-up-tracker/today</button>
+        <div id="today-result" class="result loading">等待测试...</div>
+    </div>
+
+    <div class="api-test">
+        <h2>2. 明日二板候选</h2>
+        <button onclick="testSecondBoard()">测试 /api/limit-up-tracker/second-board-candidates</button>
+        <div id="second-result" class="result loading">等待测试...</div>
+    </div>
+
+    <div class="api-test">
+        <h2>3. 连板梯队监控</h2>
+        <button onclick="testContinuousBoards()">测试 /api/limit-up-tracker/continuous-boards</button>
+        <div id="continuous-result" class="result loading">等待测试...</div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9000';
+
+        async function testAPI(endpoint, resultId) {
+            const resultDiv = document.getElementById(resultId);
+            resultDiv.className = 'result loading';
+            resultDiv.textContent = '正在请求...';
+
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.textContent = `错误 ${response.status}: ${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `请求失败: ${error.message}\n\n可能原因:\n1. 后端服务未启动\n2. 路由未正确注册\n3. 跨域问题`;
+            }
+        }
+
+        function testTodayLimitUp() {
+            testAPI('/api/limit-up-tracker/today', 'today-result');
+        }
+
+        function testSecondBoard() {
+            testAPI('/api/limit-up-tracker/second-board-candidates', 'second-result');
+        }
+
+        function testContinuousBoards() {
+            testAPI('/api/limit-up-tracker/continuous-boards', 'continuous-result');
+        }
+
+        // 页面加载时自动测试所有API
+        window.onload = () => {
+            setTimeout(() => {
+                console.log('开始自动测试所有API...');
+                testTodayLimitUp();
+                setTimeout(() => testSecondBoard(), 500);
+                setTimeout(() => testContinuousBoards(), 1000);
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>开盘冲刺滚动修复验证</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #e5e5e5;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .header h1 {
+            color: #ff6b35;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .status {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff6b35;
+        }
+        
+        .time-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+        
+        .time-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .time-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .time-stats {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        .stock-list {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+        
+        .stock-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .stock-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        .stock-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(255, 107, 53, 0.6) 0%, rgba(255, 107, 53, 0.4) 100%);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+        }
+        
+        .stock-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(255, 107, 53, 0.8) 0%, rgba(255, 107, 53, 0.6) 100%);
+        }
+        
+        .scroll-hint {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        
+        .scroll-hint-text {
+            font-size: 11px;
+            color: #ff6b35;
+            font-weight: 500;
+        }
+        
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            border-left: 3px solid #ff6b35;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .stock-item:hover {
+            background: #1a1a1a;
+            border-color: rgba(255, 107, 53, 0.3);
+            transform: translateX(3px);
+        }
+        
+        .stock-info {
+            flex: 1;
+        }
+        
+        .stock-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        
+        .stock-code {
+            font-size: 11px;
+            color: #999;
+            font-family: monospace;
+        }
+        
+        .stock-metrics {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+        
+        .metric {
+            text-align: center;
+            min-width: 50px;
+        }
+        
+        .metric-label {
+            font-size: 9px;
+            color: #999;
+            display: block;
+            margin-bottom: 2px;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            font-size: 11px;
+            color: #ffffff;
+        }
+        
+        .prediction-score {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .error {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .success {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 开盘冲刺滚动修复验证</h1>
+            <p>验证股票列表滚动显示功能是否正常工作</p>
+        </div>
+        
+        <div id="status" class="status">
+            <div class="loading">🔄 正在加载数据...</div>
+        </div>
+        
+        <div id="timeSections">
+            <!-- 时间分层将在这里动态生成 -->
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+        
+        // 定义时间段
+        const timeSlots = [
+            { start: '09:30', end: '09:45', label: '🚀 开盘冲刺' },
+            { start: '09:45', end: '10:00', label: '🎯 趋势确认' },
+            { start: '10:00', end: '10:30', label: '⭐ 黄金决策' },
+            { start: '10:30', end: '11:00', label: '📈 强势延续' },
+            { start: '11:00', end: '11:30', label: '🔍 午前观察' },
+            { start: '13:00', end: '14:00', label: '🌟 午后发力' },
+            { start: '14:00', end: '14:30', label: '💪 尾盘冲刺' },
+            { start: '14:30', end: '15:00', label: '🎨 封板决战' }
+        ];
+        
+        function updateStatus(message, type = 'loading') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+        
+        function generateRealisticTime(slotIndex) {
+            const slot = timeSlots[slotIndex];
+            const startMinutes = timeToMinutes(slot.start);
+            const endMinutes = timeToMinutes(slot.end);
+            const randomMinutes = startMinutes + Math.floor(Math.random() * (endMinutes - startMinutes));
+            
+            const hours = Math.floor(randomMinutes / 60);
+            const minutes = randomMinutes % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+        }
+        
+        function timeToMinutes(timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+        
+        function enhanceStockData(stock, slotIndex) {
+            const enhancedStock = { ...stock };
+            
+            // 生成真实的时间
+            enhancedStock.realSealTime = generateRealisticTime(slotIndex);
+            
+            // 生成更真实的成交数据
+            const baseAmount = Math.random() * 8 + 1; // 1-9亿
+            enhancedStock.realAmount = baseAmount;
+            enhancedStock.realTurnover = Math.random() * 15 + 2; // 2-17%
+            enhancedStock.realVolumeRatio = Math.random() * 4 + 1; // 1-5倍
+            
+            // 使用股票的真实涨幅
+            enhancedStock.realChangePercent = stock.changePercent || (2 + Math.random() * 6);
+            
+            // 计算更真实的预测分数
+            let score = 50;
+            score += enhancedStock.realChangePercent * 3;
+            score += Math.min(enhancedStock.realVolumeRatio * 5, 20);
+            score += Math.min(enhancedStock.realTurnover, 15);
+            score += (6 - slotIndex) * 2;
+            
+            enhancedStock.realPredictionScore = Math.min(Math.max(score, 30), 95);
+            
+            return enhancedStock;
+        }
+        
+        function renderStockItem(stock) {
+            return `
+                <div class="stock-item">
+                    <div class="stock-info">
+                        <div class="stock-name">
+                            ${stock.name}
+                            <span style="background: #10b981; color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; margin-left: 8px;">选出: ${stock.selectedTime || stock.realSealTime}</span>
+                        </div>
+                        <div class="stock-code">
+                            ${stock.code} | 涨停: ${stock.realSealTime || stock.sealTime}
+                        </div>
+                    </div>
+                    
+                    <div class="stock-metrics">
+                        <div class="metric">
+                            <span class="metric-label">涨幅</span>
+                            <span class="metric-value" style="color: ${stock.realChangePercent >= 0 ? '#10b981' : '#ef4444'}">
+                                ${(stock.realChangePercent || 0).toFixed(2)}%
+                            </span>
+                        </div>
+                        
+                        <div class="metric">
+                            <span class="metric-label">成交额</span>
+                            <span class="metric-value">
+                                ${(stock.realAmount || 0).toFixed(1)}亿
+                            </span>
+                        </div>
+                        
+                        <div class="metric">
+                            <span class="metric-label">换手</span>
+                            <span class="metric-value">
+                                ${(stock.realTurnover || 0).toFixed(1)}%
+                            </span>
+                        </div>
+                        
+                        <div class="metric">
+                            <span class="metric-label">量比</span>
+                            <span class="metric-value">
+                                ${(stock.realVolumeRatio || 0).toFixed(1)}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="prediction-score">
+                        ${(stock.realPredictionScore || 0).toFixed(0)}分
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderTimeSection(segmentData, segmentIndex) {
+            const segment = segmentData.segment;
+            const stocks = segmentData.stocks || [];
+            
+            if (stocks.length === 0) {
+                return `
+                    <div class="time-section">
+                        <div class="time-header">
+                            <div class="time-title">${segment.name}</div>
+                            <div class="time-stats">
+                                <span>0只</span>
+                                <span>${segment.period}</span>
+                            </div>
+                        </div>
+                        <div class="stock-list">
+                            <div style="text-align: center; padding: 40px; color: #999;">
+                                暂无该时间段股票
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            const enhancedStocks = stocks.map(stock => enhanceStockData(stock, segmentIndex));
+            
+            return `
+                <div class="time-section">
+                    <div class="time-header">
+                        <div class="time-title">${segment.name}</div>
+                        <div class="time-stats">
+                            <span>${stocks.length}只</span>
+                            <span>${segment.period}</span>
+                        </div>
+                    </div>
+                    <div class="stock-list">
+                        ${stocks.length > 5 ? `
+                            <div class="scroll-hint">
+                                <span class="scroll-hint-text">📜 向下滚动查看更多股票 (${stocks.length}只)</span>
+                            </div>
+                        ` : ''}
+                        ${enhancedStocks.map(stock => renderStockItem(stock)).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function fetchPredictionData() {
+            try {
+                updateStatus('🔄 正在获取时间分层涨停预测数据...', 'loading');
+                
+                const response = await fetch('http://localhost:9000/api/time-segmented/predictions?limit=100');
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.code === 200 && data.data && data.data.segments) {
+                    const segments = data.data.segments;
+                    const totalStocks = segments.reduce((sum, seg) => sum + (seg.stocks?.length || 0), 0);
+                    
+                    updateStatus(`✅ 成功获取 ${totalStocks} 只预测股票，分布在 ${segments.length} 个时间段 (更新时间: ${new Date().toLocaleTimeString()})`, 'success');
+                    
+                    // 渲染时间分层
+                    const timeSectionsDiv = document.getElementById('timeSections');
+                    timeSectionsDiv.innerHTML = segments.map((segmentData, index) => 
+                        renderTimeSection(segmentData, index)
+                    ).join('');
+                    
+                    // 特别检查开盘冲刺时间段
+                    const openingSegment = segments[0];
+                    if (openingSegment && openingSegment.stocks) {
+                        console.log(`🚀 开盘冲刺时间段股票数量: ${openingSegment.stocks.length}`);
+                        if (openingSegment.stocks.length > 5) {
+                            console.log('✅ 开盘冲刺时间段有足够股票进行滚动测试');
+                        } else {
+                            console.log('⚠️ 开盘冲刺时间段股票数量较少，可能无法充分测试滚动功能');
+                        }
+                    }
+                    
+                } else {
+                    throw new Error('数据格式错误');
+                }
+                
+            } catch (error) {
+                console.error('获取数据失败:', error);
+                updateStatus(`❌ 获取数据失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 初始加载
+        fetchPredictionData();
+        
+        // 每60秒自动刷新
+        setInterval(fetchPredictionData, 60000);
+    </script>
+</body>
+</html>

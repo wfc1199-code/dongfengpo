@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>通达信支撑阻力线测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chart {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #333;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 8px 16px;
+            background: #00da3c;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00ff4c;
+        }
+        .info {
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        input {
+            padding: 5px;
+            background: #222;
+            color: #fff;
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>通达信支撑阻力线测试</h1>
+        
+        <div class="controls">
+            <input type="text" id="stockCode" value="02228" placeholder="股票代码">
+            <select id="period">
+                <option value="5min">5分钟</option>
+                <option value="15min">15分钟</option>
+                <option value="daily" selected>日K线</option>
+            </select>
+            <button onclick="loadKlineData()">加载K线数据</button>
+            <button onclick="calculateSR()">计算支撑阻力</button>
+            <span id="status">准备就绪</span>
+        </div>
+        
+        <div id="info" class="info">
+            <div>当前价格: <span id="currentPrice">-</span></div>
+            <div>最近支撑: <span id="nearestSupport">-</span></div>
+            <div>最近阻力: <span id="nearestResistance">-</span></div>
+            <div>趋势建议: <span id="trendSuggestion">-</span></div>
+        </div>
+        
+        <div id="chart" class="chart"></div>
+    </div>
+
+    <script>
+        const chart = echarts.init(document.getElementById('chart'));
+        let klineData = null;
+        let currentStockCode = '';
+        let currentPeriod = '';
+        
+        async function loadKlineData() {
+            const stockCode = document.getElementById('stockCode').value;
+            const period = document.getElementById('period').value;
+            
+            if (!stockCode) {
+                alert('请输入股票代码');
+                return;
+            }
+            
+            currentStockCode = stockCode;
+            currentPeriod = period;
+            
+            try {
+                document.getElementById('status').textContent = '加载中...';
+                
+                // 处理港股代码
+                const formattedCode = stockCode.startsWith('hk') ? stockCode : `hk${stockCode}`;
+                
+                // 获取K线数据
+                const response = await fetch(`http://localhost:9000/api/stocks/${formattedCode}/kline?period=${period}&limit=100`);
+                const result = await response.json();
+                
+                if (result.code === 200 || result.klines) {
+                    klineData = result.klines || result.data || [];
+                    
+                    if (klineData && klineData.length > 0) {
+                        drawKlineChart(klineData);
+                        document.getElementById('status').textContent = `已加载 ${klineData.length} 条K线数据`;
+                        
+                        // 自动计算支撑阻力
+                        await calculateSR();
+                    } else {
+                        throw new Error('K线数据为空');
+                    }
+                } else {
+                    throw new Error(result.message || '获取K线数据失败');
+                }
+            } catch (error) {
+                console.error('加载K线失败:', error);
+                alert('加载失败: ' + error.message);
+                document.getElementById('status').textContent = '加载失败';
+            }
+        }
+        
+        async function calculateSR() {
+            if (!klineData || klineData.length === 0) {
+                alert('请先加载K线数据');
+                return;
+            }
+            
+            try {
+                document.getElementById('status').textContent = '计算支撑阻力中...';
+                
+                // 准备数据
+                const current_price = klineData[klineData.length - 1].close;
+                const high_prices = klineData.map(k => k.high);
+                const low_prices = klineData.map(k => k.low);
+                const prices = klineData.map(k => k.close);
+                const timestamps = klineData.map(k => k.date || k.time);
+                
+                // 获取今日数据
+                const todayData = klineData[klineData.length - 1];
+                const today_open = todayData.open;
+                const today_high = todayData.high;
+                const today_low = todayData.low;
+                
+                const requestData = {
+                    current_price,
+                    high_prices,
+                    low_prices,
+                    prices,
+                    timestamps,
+                    today_open,
+                    today_high,
+                    today_low,
+                    period: currentPeriod  // 添加周期参数
+                };
+                
+                // 调用通达信风格支撑阻力API
+                const response = await fetch('http://localhost:9000/api/support-resistance/tdx/calculate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // 更新信息面板
+                    updateInfo(result.analysis);
+                    
+                    // 在K线图上绘制支撑阻力线
+                    drawSRLines(result.levels);
+                    
+                    document.getElementById('status').textContent = `已计算 ${result.levels.length} 条支撑阻力线`;
+                } else {
+                    throw new Error(result.detail || '计算失败');
+                }
+            } catch (error) {
+                console.error('计算支撑阻力失败:', error);
+                alert('计算失败: ' + error.message);
+                document.getElementById('status').textContent = '计算失败';
+            }
+        }
+        
+        function updateInfo(analysis) {
+            document.getElementById('currentPrice').textContent = analysis.current_price.toFixed(2);
+            document.getElementById('nearestSupport').textContent = 
+                analysis.nearest_support ? analysis.nearest_support.toFixed(2) : '-';
+            document.getElementById('nearestResistance').textContent = 
+                analysis.nearest_resistance ? analysis.nearest_resistance.toFixed(2) : '-';
+            document.getElementById('trendSuggestion').textContent = analysis.trend_suggestion;
+        }
+        
+        function drawKlineChart(data) {
+            const dates = data.map(item => item.date || item.time);
+            const values = data.map(item => [
+                item.open,
+                item.close,
+                item.low,
+                item.high
+            ]);
+            const volumes = data.map(item => item.volume);
+            
+            const option = {
+                title: {
+                    text: `${currentStockCode} - ${currentPeriod}`,
+                    left: 'center',
+                    textStyle: { color: '#fff' }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                legend: {
+                    data: ['K线', '成交量'],
+                    top: 30,
+                    textStyle: { color: '#ccc' }
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '15%',
+                        height: '50%'
+                    },
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '70%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            interval: 'auto'
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        scale: true,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: values,
+                        itemStyle: {
+                            color: '#ff4757',
+                            color0: '#2ed573',
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: {
+                            color: function(params) {
+                                return data[params.dataIndex].close >= data[params.dataIndex].open ? '#2ed573' : '#ff4757';
+                            }
+                        }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+        }
+        
+        function drawSRLines(levels) {
+            if (!levels || levels.length === 0) return;
+            
+            // 获取当前图表配置
+            const option = chart.getOption();
+            
+            // 准备标记线数据
+            const markLineData = levels.map(level => ({
+                name: level.description,
+                yAxis: level.price,
+                lineStyle: {
+                    color: level.color,
+                    type: level.lineStyle === 'solid' ? 'solid' : 
+                          level.lineStyle === 'dashed' ? 'dashed' : 'dotted',
+                    width: level.lineWidth
+                },
+                label: {
+                    show: true,
+                    position: 'end',
+                    formatter: `{b}: {c}`,
+                    color: level.color,
+                    fontSize: 10
+                }
+            }));
+            
+            // 更新K线系列的markLine
+            option.series[0].markLine = {
+                symbol: 'none',
+                animation: false,
+                silent: true,
+                data: markLineData
+            };
+            
+            // 重新设置图表配置
+            chart.setOption(option);
+        }
+        
+        // 页面加载时自动加载数据
+        window.onload = function() {
+            loadKlineData();
+        };
+    </script>
+</body>
+</html>

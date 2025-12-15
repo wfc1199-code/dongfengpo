@@ -1,0 +1,102 @@
+{
+  "description": "Rolling window statistics calculated from cleaned ticks.",
+  "example": {
+    "avg_price": 12.42,
+    "change_percent": 1.2,
+    "max_price": 12.6,
+    "min_price": 12.3,
+    "price": 12.5,
+    "sample_size": 15,
+    "symbol": "sz000001",
+    "timestamp": "2024-03-08T09:36:05+08:00",
+    "turnover_sum": 435000.0,
+    "volume_sum": 35000,
+    "window": "5s"
+  },
+  "properties": {
+    "avg_price": {
+      "description": "窗口内均价",
+      "minimum": 0.0,
+      "title": "Avg Price",
+      "type": "number"
+    },
+    "change_percent": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "窗口起点到终点的涨跌幅(%)",
+      "title": "Change Percent"
+    },
+    "max_price": {
+      "description": "窗口内最高价",
+      "minimum": 0.0,
+      "title": "Max Price",
+      "type": "number"
+    },
+    "min_price": {
+      "description": "窗口内最低价",
+      "minimum": 0.0,
+      "title": "Min Price",
+      "type": "number"
+    },
+    "price": {
+      "description": "窗口内最新成交价",
+      "title": "Price",
+      "type": "number"
+    },
+    "sample_size": {
+      "description": "窗口内样本数量",
+      "minimum": 1,
+      "title": "Sample Size",
+      "type": "integer"
+    },
+    "symbol": {
+      "description": "证券代码",
+      "title": "Symbol",
+      "type": "string"
+    },
+    "timestamp": {
+      "description": "窗口对应的最新时间",
+      "format": "date-time",
+      "title": "Timestamp",
+      "type": "string"
+    },
+    "turnover_sum": {
+      "description": "窗口内成交额累计",
+      "minimum": 0.0,
+      "title": "Turnover Sum",
+      "type": "number"
+    },
+    "volume_sum": {
+      "description": "窗口内成交量累计",
+      "minimum": 0,
+      "title": "Volume Sum",
+      "type": "integer"
+    },
+    "window": {
+      "description": "窗口标识，如 5s/1m",
+      "title": "Window",
+      "type": "string"
+    }
+  },
+  "required": [
+    "symbol",
+    "window",
+    "timestamp",
+    "price",
+    "volume_sum",
+    "avg_price",
+    "max_price",
+    "min_price",
+    "turnover_sum",
+    "sample_size"
+  ],
+  "title": "FeatureSnapshot",
+  "type": "object"
+}

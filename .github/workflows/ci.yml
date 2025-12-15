@@ -1,0 +1,177 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # 后端测试
+  backend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Cache pip packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-cov pytest-asyncio
+    
+    - name: Run linting
+      run: |
+        cd backend
+        pip install flake8 black
+        # 检查代码格式
+        black --check .
+        # 检查代码质量
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+    
+    - name: Run tests
+      run: |
+        cd backend
+        # 运行测试并生成覆盖率报告
+        pytest --cov=. --cov-report=xml --cov-report=term
+    
+    - name: Upload coverage
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        fail_ci_if_error: false
+
+  # 数据流水线服务测试
+  data-pipeline-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install -r services/collector-gateway/requirements.txt
+        pip install -r services/data-cleaner/requirements.txt
+        pip install -r services/data-lake-writer/requirements.txt
+        pip install -r services/feature-pipeline/requirements.txt
+        pip install -r services/strategy-engine/requirements.txt
+        pip install -r services/opportunity-aggregator/requirements.txt
+        pip install -r services/risk-guard/requirements.txt
+        pip install -r services/signal-api/requirements.txt
+        pip install -r services/signal-streamer/requirements.txt
+        pip install -r services/backtest-service/requirements.txt
+
+    - name: Run pipeline tests
+      run: |
+        chmod +x scripts/run_tests.sh
+        ./scripts/run_tests.sh
+
+  # 前端测试
+  frontend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run linting
+      run: |
+        cd frontend
+        npm run lint || true
+    
+    - name: Run tests
+      run: |
+        cd frontend
+        npm test -- --coverage --watchAll=false
+    
+    - name: Build
+      run: |
+        cd frontend
+        npm run build
+
+  # 安全扫描
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run security scan for Python
+      run: |
+        pip install safety
+        cd backend
+        safety check -r requirements.txt || true
+    
+    - name: Run security scan for Node.js
+      run: |
+        cd frontend
+        npm audit || true
+
+  # 版本备份（仅在main分支）
+  version-backup:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [backend-test, data-pipeline-test, frontend-test]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Create version backup
+      run: |
+        chmod +x scripts/version_manager.sh
+        ./scripts/version_manager.sh backup patch "CI自动备份 - ${{ github.sha }}"
+    
+    - name: Upload backup artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: version-backup-${{ github.sha }}
+        path: backups/
+        retention-days: 30
+
+  # 通知
+  notify:
+    if: always()
+    needs: [backend-test, data-pipeline-test, frontend-test, security-scan]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Notify status
+      run: |
+        if [ "${{ needs.backend-test.result }}" == "success" ] && \
+           [ "${{ needs.data-pipeline-test.result }}" == "success" ] && \
+           [ "${{ needs.frontend-test.result }}" == "success" ]; then
+          echo "✅ CI Pipeline passed successfully!"
+        else
+          echo "❌ CI Pipeline failed. Please check the logs."
+          exit 1
+        fi

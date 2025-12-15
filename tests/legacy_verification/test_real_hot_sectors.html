@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试真实热门板块API</title>
+    <style>
+        body {
+            font-family: 'SF Pro', Arial, sans-serif;
+            padding: 20px;
+            background: #0a0e27;
+            color: #fff;
+        }
+        h1 {
+            color: #f39c12;
+        }
+        .sector-card {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 15px 0;
+            border-left: 4px solid #f39c12;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .sector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .sector-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+        .sector-change {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ff4757;
+        }
+        .sector-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #ddd;
+        }
+        .stat-item {
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 5px;
+        }
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        #loading {
+            text-align: center;
+            padding: 30px;
+            color: #f39c12;
+            font-size: 18px;
+        }
+        .api-info {
+            background: rgba(52, 152, 219, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔥 东方财富热门概念板块 - 实时数据测试</h1>
+
+    <div class="api-info">
+        <strong>API地址:</strong> http://localhost:9000/api/market-scanner/hot-sectors<br>
+        <strong>数据源:</strong> 东方财富直接API (push2.eastmoney.com)<br>
+        <strong>更新时间:</strong> <span id="updateTime">-</span>
+    </div>
+
+    <div>
+        <button onclick="loadData()">🔄 刷新数据</button>
+        <button onclick="window.location.href='http://localhost:3000'">🏠 返回主页</button>
+    </div>
+
+    <div id="loading" style="display: none;">⏳ 正在加载数据...</div>
+    <div id="result"></div>
+
+    <script>
+        async function loadData() {
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+            const updateTimeSpan = document.getElementById('updateTime');
+
+            loadingDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            try {
+                console.log('请求API...');
+                const response = await fetch('http://localhost:9000/api/market-scanner/hot-sectors?limit=15');
+                const data = await response.json();
+
+                console.log('API返回:', data);
+
+                if (data.code === 200 && data.data && data.data.sectors) {
+                    const sectors = data.data.sectors;
+                    const dataSource = data.data.data_source;
+                    const updatedAt = new Date(data.data.updated_at).toLocaleTimeString('zh-CN');
+
+                    updateTimeSpan.textContent = updatedAt + ' (' + dataSource + ')';
+
+                    let html = `<h2>共 ${sectors.length} 个热门板块</h2>`;
+
+                    sectors.forEach((sector, index) => {
+                        const changeClass = sector.avg_change >= 0 ? 'positive' : 'negative';
+                        const rankEmoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+
+                        html += `
+                            <div class="sector-card">
+                                <div class="sector-header">
+                                    <div>
+                                        <span style="font-size: 28px; margin-right: 10px;">${rankEmoji}</span>
+                                        <span class="sector-name">${sector.sector_name}</span>
+                                        <span style="font-size: 12px; color: #888; margin-left: 10px;">${sector.category}</span>
+                                    </div>
+                                    <div class="sector-change ${changeClass}">
+                                        ${sector.avg_change >= 0 ? '+' : ''}${sector.avg_change.toFixed(2)}%
+                                    </div>
+                                </div>
+                                <div class="sector-stats">
+                                    <div class="stat-item">
+                                        📊 ${sector.stock_count} 只股票
+                                    </div>
+                                    <div class="stat-item">
+                                        ⬆️ 涨 ${sector.up_count} 家
+                                    </div>
+                                    <div class="stat-item">
+                                        ⬇️ 跌 ${sector.down_count} 家
+                                    </div>
+                                    ${sector.limit_up_count > 0 ? `
+                                        <div class="stat-item" style="color: #ff4757; font-weight: bold;">
+                                            🚀 涨停 ${sector.limit_up_count} 只
+                                        </div>
+                                    ` : ''}
+                                    ${sector.is_confirmed ? `
+                                        <div class="stat-item" style="color: #26de81; font-weight: bold;">
+                                            ✓ 确权
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = '<p style="color: #ff4757;">❌ API返回错误: ' + (data.message || '未知错误') + '</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<p style="color: #ff4757;">❌ 请求失败: ' + error.message + '</p>';
+                console.error('请求失败:', error);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        // 页面加载时自动加载数据
+        window.onload = () => {
+            loadData();
+        };
+    </script>
+</body>
+</html>

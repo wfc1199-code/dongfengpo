@@ -1,0 +1,48 @@
+[
+  {
+    "name": "anomaly_detection",
+    "module": "strategies.anomaly_detection",
+    "class_name": "AnomalyDetectionStrategyAdapter",
+    "enabled": true,
+    "parameters": {
+      "speed_threshold": 0.02,
+      "speed_confidence_base": 0.75,
+      "volume_threshold": 2.0,
+      "volume_confidence_base": 0.70,
+      "big_order_threshold": 3000000,
+      "capital_inflow_threshold": 5000000,
+      "multi_signal_bonus": 0.1,
+      "min_confidence": 0.60,
+      "blacklist_sectors": ["ST", "退市"]
+    }
+  },
+  {
+    "name": "limit_up_prediction",
+    "module": "strategies.limit_up_prediction",
+    "class_name": "LimitUpPredictionStrategyAdapter",
+    "enabled": true,
+    "parameters": {
+      "min_change_percent": 2.0,
+      "strong_change_ratio": 0.4,
+      "near_limit_ratio": 0.8,
+      "volume_surge_ratio": 1.5,
+      "strong_volume_ratio": 2.0,
+      "huge_volume_ratio": 3.0,
+      "momentum_threshold": 0.5,
+      "acceleration_threshold": 0.2,
+      "main_board_limit": 9.8,
+      "growth_board_limit": 19.8,
+      "min_signal_count": 2,
+      "min_probability": 0.5,
+      "time_windows": [
+        {"name": "early_morning", "start": "09:30", "end": "10:00", "weight": 0.7},
+        {"name": "mid_morning", "start": "10:00", "end": "11:30", "weight": 0.6},
+        {"name": "afternoon", "start": "13:00", "end": "14:30", "weight": 0.5},
+        {"name": "late_session", "start": "14:30", "end": "15:00", "weight": 0.4}
+      ],
+      "min_confidence": 0.50,
+      "blacklist_sectors": ["ST", "退市", "*ST"],
+      "max_distance_to_limit": 8.0
+    }
+  }
+]

@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>分钟K线分隔线测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .chart {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #333;
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 8px 16px;
+            background: #00da3c;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00ff4c;
+        }
+        .info {
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>5分钟/15分钟K线分隔线测试</h1>
+        
+        <div class="controls">
+            <button onclick="load5MinData()">加载5分钟K线</button>
+            <button onclick="load15MinData()">加载15分钟K线</button>
+            <button onclick="loadDailyData()">加载日K线</button>
+            <span id="status">准备就绪</span>
+        </div>
+        
+        <div id="debugInfo" class="info"></div>
+        
+        <div id="chart" class="chart"></div>
+    </div>
+
+    <script>
+        const chart = echarts.init(document.getElementById('chart'));
+        const debugInfo = document.getElementById('debugInfo');
+        const status = document.getElementById('status');
+        
+        // 生成模拟的分钟K线数据
+        function generateMinuteData(interval) {
+            const data = [];
+            const dates = [];
+            const volumes = [];
+            
+            // 生成3天的数据
+            const days = ['2025-01-06', '2025-01-07', '2025-01-08'];
+            const minutesPerDay = interval === 5 ? 48 : 16; // 5分钟48条，15分钟16条
+            
+            days.forEach((day, dayIndex) => {
+                for (let i = 0; i < minutesPerDay; i++) {
+                    const hour = 9 + Math.floor((i * interval) / 60);
+                    const minute = (i * interval) % 60;
+                    const timeStr = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                    
+                    const basePrice = 10 + dayIndex * 0.5;
+                    const open = basePrice + Math.random() * 0.5 - 0.25;
+                    const close = basePrice + Math.random() * 0.5 - 0.25;
+                    const high = Math.max(open, close) + Math.random() * 0.2;
+                    const low = Math.min(open, close) - Math.random() * 0.2;
+                    const volume = Math.floor(Math.random() * 1000000) + 500000;
+                    
+                    dates.push(`${day} ${timeStr}`);
+                    data.push([open.toFixed(2), close.toFixed(2), low.toFixed(2), high.toFixed(2)]);
+                    volumes.push(volume);
+                }
+            });
+            
+            return { dates, data, volumes };
+        }
+        
+        // 生成日期分隔线
+        function generateDaySeparators(dates, intervalType) {
+            const separators = [];
+            let lastDate = null;
+            
+            debugInfo.innerHTML = `<strong>日期分析 (${intervalType}分钟K线):</strong><br>`;
+            debugInfo.innerHTML += `总数据点: ${dates.length}<br>`;
+            debugInfo.innerHTML += `第一个: ${dates[0]}<br>`;
+            debugInfo.innerHTML += `最后一个: ${dates[dates.length - 1]}<br><br>`;
+            
+            dates.forEach((dateStr, index) => {
+                // 提取日期部分
+                let currentDate = dateStr.split(' ')[0];
+                
+                if (lastDate && currentDate !== lastDate) {
+                    debugInfo.innerHTML += `检测到日期变化: ${lastDate} -> ${currentDate} at index ${index}<br>`;
+                    
+                    // 在新的一天开始处添加分隔线
+                    separators.push({
+                        xAxis: index,
+                        lineStyle: {
+                            color: '#ff6b6b',
+                            type: 'dashed',
+                            width: 2,
+                            opacity: 0.8
+                        },
+                        label: {
+                            show: true,
+                            formatter: currentDate.substring(5), // 显示月-日
+                            position: 'start',
+                            color: '#ffcc00',
+                            fontSize: 12,
+                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            padding: [2, 6],
+                            borderRadius: 2
+                        }
+                    });
+                }
+                lastDate = currentDate;
+            });
+            
+            debugInfo.innerHTML += `<br><strong>生成了 ${separators.length} 条分隔线</strong>`;
+            return separators;
+        }
+        
+        function renderChart(title, dates, klineData, volumes, showSeparators = false, interval = null) {
+            const separators = showSeparators ? generateDaySeparators(dates, interval) : [];
+            
+            // 计算基准价格（第一根K线的开盘价）
+            const basePrice = klineData.length > 0 ? parseFloat(klineData[0][0]) : 10;
+            
+            const option = {
+                title: {
+                    text: title,
+                    left: 'center',
+                    textStyle: { color: '#fff', fontSize: 18 }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                legend: {
+                    data: ['K线', '成交量'],
+                    top: 30,
+                    textStyle: { color: '#ccc' }
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '15%',  // 增加右侧空间
+                        top: '15%',
+                        height: '50%'
+                    },
+                    {
+                        left: '10%',
+                        right: '15%',  // 保持一致
+                        top: '70%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            interval: 'auto'
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        position: 'left',
+                        scale: true,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        position: 'right',
+                        scale: true,
+                        min: function(value) {
+                            return value.min;
+                        },
+                        max: function(value) {
+                            return value.max;
+                        },
+                        axisLine: { 
+                            show: true,
+                            lineStyle: { color: '#555' } 
+                        },
+                        axisLabel: { 
+                            show: true,
+                            color: '#ff6b6b',
+                            fontSize: 12,
+                            formatter: function(value) {
+                                // 计算涨跌幅百分比
+                                const changePercent = ((value - basePrice) / basePrice * 100).toFixed(2);
+                                return changePercent > 0 ? '+' + changePercent + '%' : changePercent + '%';
+                            }
+                        },
+                        splitLine: { show: false }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: klineData,
+                        yAxisIndex: 0,
+                        itemStyle: {
+                            color: '#ff4757',
+                            color0: '#2ed573',
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        },
+                        markLine: {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            data: separators
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 2,
+                        data: volumes,
+                        itemStyle: { color: '#4ecdc4' },
+                        markLine: {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            data: separators.map(s => ({
+                                ...s,
+                                label: { show: false }
+                            }))
+                        }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+            status.textContent = `已加载: ${title}`;
+        }
+        
+        function load5MinData() {
+            const { dates, data, volumes } = generateMinuteData(5);
+            renderChart('5分钟K线图 (带日期分隔线)', dates, data, volumes, true, 5);
+        }
+        
+        function load15MinData() {
+            const { dates, data, volumes } = generateMinuteData(15);
+            renderChart('15分钟K线图 (带日期分隔线)', dates, data, volumes, true, 15);
+        }
+        
+        function loadDailyData() {
+            const dates = [];
+            const data = [];
+            const volumes = [];
+            
+            // 生成30天的日K线数据
+            for (let i = 0; i < 30; i++) {
+                const date = new Date(2025, 0, i + 1);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                const basePrice = 10 + i * 0.05;
+                const open = basePrice + Math.random() * 0.5 - 0.25;
+                const close = basePrice + Math.random() * 0.5 - 0.25;
+                const high = Math.max(open, close) + Math.random() * 0.2;
+                const low = Math.min(open, close) - Math.random() * 0.2;
+                const volume = Math.floor(Math.random() * 5000000) + 1000000;
+                
+                dates.push(dateStr);
+                data.push([open.toFixed(2), close.toFixed(2), low.toFixed(2), high.toFixed(2)]);
+                volumes.push(volume);
+            }
+            
+            renderChart('日K线图 (无分隔线)', dates, data, volumes, false);
+        }
+        
+        // 默认加载5分钟数据
+        load5MinData();
+    </script>
+</body>
+</html>

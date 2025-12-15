@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>晶泰控股 - 分时交易策略可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .chart-container {
+            width: 100%;
+            height: 600px;
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            background: #fafafa;
+        }
+        
+        .strategy-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .strategy-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .strategy-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .strategy-card h3 {
+            color: #2a5298;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .strategy-card .time {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        .strategy-card ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .strategy-card li {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .strategy-card li:last-child {
+            border-bottom: none;
+        }
+        
+        .action-buy {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .action-sell {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .action-hold {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+        
+        .legend-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .legend-panel h3 {
+            color: #2a5298;
+            margin-bottom: 15px;
+        }
+        
+        .legend-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .legend-color {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .info-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        
+        .badge-support {
+            background: #e0f2fe;
+            color: #0369a1;
+        }
+        
+        .badge-resistance {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .badge-pivot {
+            background: #fef3c7;
+            color: #d97706;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 晶泰控股(02228.HK) - 分时交易策略可视化</h1>
+            <p>基于通达信支撑压力系统的实战操作指南</p>
+        </div>
+        
+        <div class="content">
+            <div class="controls">
+                <button class="btn btn-primary" onclick="simulateTrading()">▶️ 模拟交易</button>
+                <button class="btn btn-secondary" onclick="resetChart()">🔄 重置图表</button>
+                <button class="btn btn-secondary" onclick="toggleOperations()">👁️ 显示/隐藏操作点</button>
+                <button class="btn btn-secondary" onclick="showRealtime()">📊 实时更新</button>
+            </div>
+            
+            <div class="legend-panel">
+                <h3>📍 图例说明</h3>
+                <div class="legend-items">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #0000FF;"></div>
+                        <span>固定阻力(7/8)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #FF00FF;"></div>
+                        <span>固定支撑(0.5/8)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #999999;"></div>
+                        <span>中轴线</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span>买入信号</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ef4444;"></div>
+                        <span>卖出信号</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #f59e0b;"></div>
+                        <span>观望区域</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chart-container" id="mainChart"></div>
+            
+            <div class="strategy-panel">
+                <div class="strategy-card">
+                    <h3>📈 <span class="time">9:30</span> 开盘策略</h3>
+                    <ul>
+                        <li>今日开盘8.31（高开1.6%）</li>
+                        <li class="action-buy">突破昨高8.18：试探买入(10%)</li>
+                        <li class="action-hold">站稳8.216支撑：准备加仓</li>
+                        <li class="action-buy">量能放大：积极参与</li>
+                        <li>首个5分钟快速上涨</li>
+                    </ul>
+                </div>
+                
+                <div class="strategy-card">
+                    <h3>🚀 <span class="time">10:00</span> 早盘主升</h3>
+                    <ul>
+                        <li>价格快速突破8.68</li>
+                        <li class="action-buy">突破中轴8.815：加仓30%</li>
+                        <li class="action-buy">向9元冲击：持股待涨</li>
+                        <li class="action-hold">成交量持续放大</li>
+                        <li>移动止损至8.50</li>
+                    </ul>
+                </div>
+                
+                <div class="strategy-card">
+                    <h3>⚖️ <span class="time">11:00</span> 午盘前</h3>
+                    <ul>
+                        <li>触及日内高点9.50</li>
+                        <li class="action-sell">接近阻力9.356：部分止盈</li>
+                        <li class="action-hold">涨幅超10%：减仓保利润</li>
+                        <li class="action-sell">获利20%卖出1/3</li>
+                        <li>上午最高9.50，最低8.13</li>
+                    </ul>
+                </div>
+                
+                <div class="strategy-card">
+                    <h3>💼 <span class="time">13:00</span> 午后开盘</h3>
+                    <ul>
+                        <li>高位震荡整理9.38</li>
+                        <li class="action-hold">维持9.2-9.4区间</li>
+                        <li class="action-sell">涨幅巨大：逢高减仓</li>
+                        <li class="action-hold">观察能否再创新高</li>
+                        <li>止盈目标：9.50附近</li>
+                    </ul>
+                </div>
+                
+                <div class="strategy-card">
+                    <h3>🔔 <span class="time">14:30</span> 尾盘阶段</h3>
+                    <ul>
+                        <li>稳定在9.20附近</li>
+                        <li class="action-hold">涨幅11%已很大</li>
+                        <li class="action-sell">获利了结为主</li>
+                        <li class="action-hold">留少量仓位博弈</li>
+                        <li>关注尾盘资金动向</li>
+                    </ul>
+                </div>
+                
+                <div class="strategy-card">
+                    <h3>🏁 <span class="time">15:30</span> 收盘决策</h3>
+                    <ul>
+                        <li>收盘9.13（涨11.61%）</li>
+                        <li class="action-sell">单日涨幅过大：大部分止盈</li>
+                        <li class="action-hold">留10%仓位：博弈延续性</li>
+                        <li class="action-buy">次日回调可接回</li>
+                        <li>止损设置：8.80</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="legend-panel">
+                <h3>⚠️ 风险控制要点</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-top: 15px;">
+                    <div>
+                        <span class="info-badge badge-support">仓位管理</span>
+                        <p style="margin-top: 8px; font-size: 14px; color: #666;">单次最大40%，试探10%，基础20%</p>
+                    </div>
+                    <div>
+                        <span class="info-badge badge-resistance">止损设置</span>
+                        <p style="margin-top: 8px; font-size: 14px; color: #666;">固定止损2%，关键位止损立即执行</p>
+                    </div>
+                    <div>
+                        <span class="info-badge badge-pivot">止盈策略</span>
+                        <p style="margin-top: 8px; font-size: 14px; color: #666;">涨5%卖1/3，涨8%再卖1/3</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let myChart;
+        let showOperations = true;
+        let isSimulating = false;
+        
+        // 基于真实数据生成分时数据
+        function generateIntradayData() {
+            const data = [];
+            const volumes = [];
+            const times = [];
+            
+            // 真实数据（2024-01-14 晶泰控股）
+            const realData = {
+                yesterday_close: 8.180,  // 昨收
+                open: 8.310,            // 今开
+                high: 9.500,            // 最高
+                low: 8.130,             // 最低
+                close: 9.130,           // 现价
+                change_pct: 11.61       // 涨幅
+            };
+            
+            // 生成交易时间
+            for (let h = 9; h <= 15; h++) {
+                for (let m = 0; m < 60; m++) {
+                    if (h === 9 && m < 30) continue;
+                    if (h === 12) continue; // 午休
+                    if (h === 15 && m > 30) break;
+                    
+                    const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                    times.push(timeStr);
+                }
+            }
+            
+            // 生成价格数据（基于真实走势）
+            let basePrice = realData.open;
+            let trend = 1;
+            
+            times.forEach((time, index) => {
+                // 添加一些随机性和趋势
+                const random = (Math.random() - 0.5) * 0.05;
+                const trendEffect = trend * 0.02;
+                
+                // 模拟今天的真实走势（大涨11.61%）
+                if (time === '09:30') basePrice = 8.310; // 开盘
+                if (time === '09:45') { basePrice = 8.450; trend = 1.5; } // 开盘拉升
+                if (time === '10:00') { basePrice = 8.680; trend = 1.8; } // 快速上涨
+                if (time === '10:30') { basePrice = 9.100; trend = 1.2; } // 突破9元
+                if (time === '10:45') { basePrice = 9.350; trend = 1.0; } // 继续上涨
+                if (time === '11:00') { basePrice = 9.450; trend = 0.5; } // 接近最高
+                if (time === '11:20') { basePrice = 9.500; trend = -0.3; } // 触及最高
+                if (time === '13:00') { basePrice = 9.380; trend = 0.2; } // 午后高位震荡
+                if (time === '13:30') { basePrice = 9.250; trend = -0.2; } // 小幅回调
+                if (time === '14:00') { basePrice = 9.180; trend = 0.3; } // 震荡整理
+                if (time === '14:30') { basePrice = 9.200; trend = 0.1; } // 尾盘稳定
+                if (time === '15:00') { basePrice = 9.150; trend = -0.1; } // 略有回落
+                if (time === '15:30') { basePrice = 9.130; trend = 0; } // 收盘价
+                
+                basePrice += random + trendEffect;
+                // 确保价格在最高最低之间
+                basePrice = Math.max(realData.low, Math.min(realData.high, basePrice));
+                data.push(basePrice.toFixed(3));
+                
+                // 生成成交量（总成交4.98亿股）
+                const totalVolume = 498697837;
+                const avgVolume = totalVolume / times.length;
+                const volumeRandom = Math.random() * avgVolume * 0.5;
+                // 开盘和收盘成交量较大
+                let volumeMultiplier = 1;
+                if (time >= '09:30' && time <= '10:00') volumeMultiplier = 2;
+                if (time >= '14:30' && time <= '15:30') volumeMultiplier = 1.5;
+                volumes.push(avgVolume * volumeMultiplier + volumeRandom);
+                
+                // 调整趋势
+                if (Math.random() > 0.9) {
+                    trend = trend * 0.8;
+                }
+            });
+            
+            return { times, data, volumes, realData };
+        }
+        
+        // 初始化图表
+        function initChart() {
+            const chartDom = document.getElementById('mainChart');
+            myChart = echarts.init(chartDom);
+            
+            const { times, data, volumes, realData } = generateIntradayData();
+            
+            const option = {
+                title: {
+                    text: `晶泰控股(02228.HK) - 分时交易策略图 [涨幅: +${realData.change_pct}%]`,
+                    subtext: `昨收: ${realData.yesterday_close} | 今开: ${realData.open} | 最高: ${realData.high} | 最低: ${realData.low} | 现价: ${realData.close}`,
+                    left: 'center',
+                    top: 10,
+                    textStyle: {
+                        fontSize: 18,
+                        fontWeight: 'bold',
+                        color: '#e11d48'
+                    },
+                    subtextStyle: {
+                        fontSize: 12,
+                        color: '#666'
+                    }
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    formatter: function(params) {
+                        let html = params[0].axisValue + '<br/>';
+                        params.forEach(param => {
+                            if (param.seriesName === '分时价格') {
+                                html += `价格: ${param.value} HKD<br/>`;
+                            } else if (param.seriesName === '成交量') {
+                                html += `成交量: ${(param.value/10000).toFixed(0)}万<br/>`;
+                            } else if (param.seriesName.includes('操作')) {
+                                html += `${param.seriesName}: ${param.value} HKD<br/>`;
+                            }
+                        });
+                        return html;
+                    }
+                },
+                legend: {
+                    data: ['分时价格', '固定阻力', '固定支撑', '中轴线', '买入操作', '卖出操作'],
+                    top: 40
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '15%',
+                        height: '55%'
+                    },
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '75%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: times,
+                        gridIndex: 0,
+                        axisLabel: {
+                            interval: 29,
+                            rotate: 0
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: times,
+                        gridIndex: 1,
+                        axisLabel: {
+                            show: false
+                        }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        scale: true,
+                        splitArea: {
+                            show: true
+                        },
+                        axisLabel: {
+                            formatter: '{value} HKD'
+                        },
+                        min: 8.0,
+                        max: 9.6
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        splitNumber: 2,
+                        axisLabel: {
+                            formatter: function(value) {
+                                return (value/10000).toFixed(0) + '万';
+                            }
+                        }
+                    }
+                ],
+                series: [
+                    {
+                        name: '分时价格',
+                        type: 'line',
+                        data: data,
+                        smooth: true,
+                        symbol: 'none',
+                        lineStyle: {
+                            width: 2,
+                            color: '#5470c6'
+                        },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: 'rgba(84, 112, 198, 0.5)' },
+                                { offset: 1, color: 'rgba(84, 112, 198, 0.1)' }
+                            ])
+                        }
+                    },
+                    {
+                        name: '固定阻力',
+                        type: 'line',
+                        data: Array(times.length).fill(9.356),  // 8.13 + (9.50-8.13)*7/8 = 9.329
+                        symbol: 'none',
+                        lineStyle: {
+                            width: 2,
+                            color: '#0000FF',
+                            type: 'solid'
+                        },
+                        label: {
+                            show: true,
+                            position: 'end',
+                            formatter: '阻力 9.356'
+                        }
+                    },
+                    {
+                        name: '固定支撑',
+                        type: 'line',
+                        data: Array(times.length).fill(8.216),  // 8.13 + (9.50-8.13)*0.5/8 = 8.216
+                        symbol: 'none',
+                        lineStyle: {
+                            width: 2,
+                            color: '#FF00FF',
+                            type: 'solid'
+                        },
+                        label: {
+                            show: true,
+                            position: 'end',
+                            formatter: '支撑 8.216'
+                        }
+                    },
+                    {
+                        name: '中轴线',
+                        type: 'line',
+                        data: Array(times.length).fill(8.815),  // (9.50 + 8.13) / 2 = 8.815
+                        symbol: 'none',
+                        lineStyle: {
+                            width: 1,
+                            color: '#999999',
+                            type: 'dashed'
+                        },
+                        label: {
+                            show: true,
+                            position: 'end',
+                            formatter: '中轴 8.815'
+                        }
+                    },
+                    {
+                        name: '昨收线',
+                        type: 'line',
+                        data: Array(times.length).fill(8.180),
+                        symbol: 'none',
+                        lineStyle: {
+                            width: 1,
+                            color: '#ff9800',
+                            type: 'dotted'
+                        },
+                        label: {
+                            show: true,
+                            position: 'end',
+                            formatter: '昨收 8.180'
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        data: volumes,
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        itemStyle: {
+                            color: function(params) {
+                                return params.dataIndex > 0 && 
+                                       data[params.dataIndex] >= data[params.dataIndex - 1] 
+                                       ? '#ef4444' : '#10b981';
+                            }
+                        }
+                    }
+                ]
+            };
+            
+            // 添加操作标记
+            if (showOperations) {
+                // 买入点
+                option.series.push({
+                    name: '买入操作',
+                    type: 'scatter',
+                    data: [
+                        [times.indexOf('09:35'), 1403],
+                        [times.indexOf('10:05'), 1416],
+                        [times.indexOf('13:05'), 1411]
+                    ],
+                    symbolSize: 15,
+                    itemStyle: {
+                        color: '#10b981'
+                    },
+                    label: {
+                        show: true,
+                        formatter: '买',
+                        position: 'top',
+                        color: '#10b981',
+                        fontWeight: 'bold'
+                    }
+                });
+                
+                // 卖出点
+                option.series.push({
+                    name: '卖出操作',
+                    type: 'scatter',
+                    data: [
+                        [times.indexOf('10:45'), 1414],
+                        [times.indexOf('14:35'), 1421],
+                        [times.indexOf('15:25'), 1419]
+                    ],
+                    symbolSize: 15,
+                    itemStyle: {
+                        color: '#ef4444'
+                    },
+                    label: {
+                        show: true,
+                        formatter: '卖',
+                        position: 'bottom',
+                        color: '#ef4444',
+                        fontWeight: 'bold'
+                    }
+                });
+                
+                // 添加操作区域标记
+                option.series.push({
+                    name: '震荡区间',
+                    type: 'line',
+                    markArea: {
+                        silent: true,
+                        itemStyle: {
+                            color: 'rgba(245, 158, 11, 0.1)'
+                        },
+                        data: [
+                            [{
+                                xAxis: '11:00'
+                            }, {
+                                xAxis: '13:00'
+                            }]
+                        ],
+                        label: {
+                            show: true,
+                            position: 'insideTop',
+                            formatter: '震荡观望区'
+                        }
+                    }
+                });
+            }
+            
+            myChart.setOption(option);
+        }
+        
+        // 模拟交易动画
+        function simulateTrading() {
+            if (isSimulating) return;
+            isSimulating = true;
+            
+            // 逐步显示交易信号
+            let step = 0;
+            const steps = [
+                { time: '09:30', action: '开盘观察', price: 1402 },
+                { time: '09:35', action: '试探买入10%', price: 1403 },
+                { time: '10:05', action: '突破加仓30%', price: 1416 },
+                { time: '10:45', action: '阻力减仓', price: 1414 },
+                { time: '11:00', action: '震荡观望', price: 1412 },
+                { time: '13:05', action: '午后加仓', price: 1411 },
+                { time: '14:35', action: '尾盘止盈', price: 1421 },
+                { time: '15:25', action: '收盘清仓', price: 1419 }
+            ];
+            
+            const interval = setInterval(() => {
+                if (step >= steps.length) {
+                    clearInterval(interval);
+                    isSimulating = false;
+                    return;
+                }
+                
+                const currentStep = steps[step];
+                
+                // 在图表上添加动态标注
+                const option = myChart.getOption();
+                if (!option.series[6]) {
+                    option.series[6] = {
+                        type: 'scatter',
+                        data: [],
+                        symbolSize: 20,
+                        itemStyle: {
+                            color: '#fbbf24'
+                        },
+                        label: {
+                            show: true,
+                            formatter: function(params) {
+                                return currentStep.action;
+                            },
+                            position: 'right',
+                            fontSize: 12,
+                            fontWeight: 'bold'
+                        },
+                        animation: true,
+                        animationDuration: 500
+                    };
+                }
+                
+                option.series[6].data.push([currentStep.time, currentStep.price]);
+                myChart.setOption(option);
+                
+                step++;
+            }, 1500);
+        }
+        
+        // 重置图表
+        function resetChart() {
+            initChart();
+        }
+        
+        // 切换操作点显示
+        function toggleOperations() {
+            showOperations = !showOperations;
+            initChart();
+        }
+        
+        // 显示实时更新（模拟）
+        function showRealtime() {
+            alert('实时数据更新功能需要连接到实际数据源。\n当前为演示模式，显示的是模拟数据。');
+        }
+        
+        // 页面加载时初始化
+        window.onload = function() {
+            initChart();
+        };
+        
+        // 响应窗口大小变化
+        window.onresize = function() {
+            if (myChart) {
+                myChart.resize();
+            }
+        };
+    </script>
+</body>
+</html>

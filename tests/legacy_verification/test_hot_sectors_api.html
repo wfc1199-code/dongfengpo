@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>测试热门板块API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #fff;
+        }
+        .sector-card {
+            background: #16213e;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #e94560;
+        }
+        .sector-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f39c12;
+            margin-bottom: 8px;
+        }
+        .sector-stats {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-size: 14px;
+        }
+        .stat-item {
+            padding: 5px 10px;
+            background: rgba(233, 69, 96, 0.1);
+            border-radius: 4px;
+        }
+        .positive { color: #ff4d4f; }
+        .negative { color: #52c41a; }
+        .confirmed {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #52c41a;
+            color: white;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #e94560;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c23b51;
+        }
+        #loading {
+            text-align: center;
+            padding: 20px;
+            color: #f39c12;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔥 热门板块测试</h1>
+    <div>
+        <button onclick="testBackendAPI()">测试后端API</button>
+        <button onclick="testMockData()">测试模拟数据</button>
+    </div>
+    <div id="loading" style="display: none;">加载中...</div>
+    <div id="result"></div>
+
+    <script>
+        async function testBackendAPI() {
+            const resultDiv = document.getElementById('result');
+            const loadingDiv = document.getElementById('loading');
+
+            loadingDiv.style.display = 'block';
+            resultDiv.innerHTML = '';
+
+            try {
+                const response = await fetch('http://localhost:9000/api/market-scanner/hot-sectors?limit=10');
+                const data = await response.json();
+
+                console.log('API返回数据:', data);
+
+                if (data.code === 200 && data.data.sectors) {
+                    displaySectors(data.data.sectors, data.data.data_source);
+                } else {
+                    resultDiv.innerHTML = '<p style="color: #ff4d4f;">API返回错误: ' + (data.message || '未知错误') + '</p>';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = '<p style="color: #ff4d4f;">请求失败: ' + error.message + '</p>';
+                console.error('请求失败:', error);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function testMockData() {
+            // 模拟您截图中的数据格式
+            const mockSectors = [
+                {
+                    sector_name: "锂电池概念",
+                    avg_change: 0.98,
+                    up_count: 282,
+                    down_count: 178,
+                    limit_up_count: 9,
+                    is_confirmed: true,
+                    rank: 1
+                },
+                {
+                    sector_name: "芯片概念",
+                    avg_change: 0.81,
+                    up_count: 320,
+                    down_count: 211,
+                    limit_up_count: 14,
+                    is_confirmed: true,
+                    rank: 2
+                },
+                {
+                    sector_name: "军工",
+                    avg_change: 0.98,
+                    up_count: 368,
+                    down_count: 210,
+                    limit_up_count: 6,
+                    is_confirmed: false,
+                    rank: 3
+                },
+                {
+                    sector_name: "机器人概念",
+                    avg_change: 0.86,
+                    up_count: 459,
+                    down_count: 196,
+                    limit_up_count: 10,
+                    is_confirmed: false,
+                    rank: 4
+                },
+                {
+                    sector_name: "光伏概念",
+                    avg_change: 0.93,
+                    up_count: 281,
+                    down_count: 171,
+                    limit_up_count: 9,
+                    is_confirmed: false,
+                    rank: 5
+                },
+                {
+                    sector_name: "金属铜",
+                    avg_change: 3.34,
+                    up_count: 58,
+                    down_count: 7,
+                    limit_up_count: 7,
+                    is_confirmed: false,
+                    rank: 6
+                },
+                {
+                    sector_name: "电池",
+                    avg_change: 2.02,
+                    up_count: 76,
+                    down_count: 25,
+                    limit_up_count: 4,
+                    is_confirmed: false,
+                    rank: 7
+                },
+                {
+                    sector_name: "小金属概念",
+                    avg_change: 2.58,
+                    up_count: 68,
+                    down_count: 15,
+                    limit_up_count: 4,
+                    is_confirmed: false,
+                    rank: 8
+                }
+            ];
+
+            displaySectors(mockSectors, 'mock_data');
+        }
+
+        function displaySectors(sectors, dataSource) {
+            const resultDiv = document.getElementById('result');
+
+            let html = `<h2>数据源: ${dataSource}</h2>`;
+
+            sectors.forEach(sector => {
+                const changeClass = sector.avg_change >= 0 ? 'positive' : 'negative';
+
+                html += `
+                    <div class="sector-card">
+                        <div class="sector-name">
+                            ${sector.rank}. ${sector.sector_name}
+                            ${sector.is_confirmed ? '<span class="confirmed">确权</span>' : ''}
+                        </div>
+                        <div class="sector-stats">
+                            ${sector.limit_up_count > 0 ?
+                                `<div class="stat-item positive">
+                                    <strong>${sector.limit_up_count}↑涨停</strong> ${sector.avg_change.toFixed(2)}%
+                                </div>` :
+                                `<div class="stat-item ${changeClass}">
+                                    涨跌幅: ${sector.avg_change >= 0 ? '+' : ''}${sector.avg_change.toFixed(2)}%
+                                </div>`
+                            }
+                            ${sector.up_count !== undefined && sector.down_count !== undefined ?
+                                `<div class="stat-item">
+                                    涨<span class="positive">${sector.up_count}</span>/
+                                    <span class="negative">${sector.down_count}</span>跌
+                                </div>` : ''
+                            }
+                            ${sector.stock_count ?
+                                `<div class="stat-item">
+                                    ${sector.stock_count}只股票
+                                </div>` : ''
+                            }
+                            ${sector.leading_stock ?
+                                `<div class="stat-item">
+                                    龙头: ${sector.leading_stock}
+                                </div>` : ''
+                            }
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultDiv.innerHTML = html;
+        }
+
+        // 页面加载时自动测试
+        window.onload = () => {
+            testBackendAPI();
+        };
+    </script>
+</body>
+</html>

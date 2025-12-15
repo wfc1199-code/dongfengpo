@@ -1,0 +1,12 @@
+{
+  "models": {
+    "CleanedTick": "CleanedTick.schema.json",
+    "FeatureSnapshot": "FeatureSnapshot.schema.json",
+    "MessageEnvelope": "MessageEnvelope.schema.json",
+    "OpportunitySignal": "OpportunitySignal.schema.json",
+    "RiskAlert": "RiskAlert.schema.json",
+    "StrategySignal": "StrategySignal.schema.json",
+    "TickRecord": "TickRecord.schema.json"
+  },
+  "schema_version": "1.0"
+}

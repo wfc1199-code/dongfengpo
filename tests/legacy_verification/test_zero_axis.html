@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>0轴测试 - 688155</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.2/dist/echarts.min.js"></script>
+</head>
+<body style="background: #1a1a1a; margin: 0; padding: 20px;">
+    <div id="chart" style="width: 100%; height: 600px;"></div>
+    <div style="color: white; padding: 20px;">
+        <h3>数据信息</h3>
+        <div id="info"></div>
+    </div>
+    
+    <script>
+        async function loadData() {
+            const response = await fetch('http://localhost:9000/api/stocks/688155/timeshare');
+            const data = await response.json();
+            
+            const yesterdayClose = data.yesterday_close || 53.31;
+            const timeshareData = data.timeshare_data || [];
+            
+            // 提取价格数据
+            const times = [];
+            const prices = [];
+            
+            timeshareData.forEach(item => {
+                times.push(item.time);
+                prices.push(item.price);
+            });
+            
+            // 计算Y轴范围
+            const allPrices = [...prices, yesterdayClose].filter(p => p > 0);
+            const maxPrice = Math.max(...allPrices);
+            const minPrice = Math.min(...allPrices);
+            
+            // 确保Y轴范围包含昨收价
+            const priceRange = maxPrice - minPrice;
+            const yAxisMax = maxPrice + priceRange * 0.1;
+            const yAxisMin = minPrice - priceRange * 0.1;
+            
+            // 显示信息
+            document.getElementById('info').innerHTML = `
+                <p>昨收价: ${yesterdayClose}</p>
+                <p>最高价: ${maxPrice.toFixed(2)}</p>
+                <p>最低价: ${minPrice.toFixed(2)}</p>
+                <p>当前价: ${prices[prices.length - 1]?.toFixed(2) || 'N/A'}</p>
+                <p>涨跌幅: ${((prices[prices.length - 1] - yesterdayClose) / yesterdayClose * 100).toFixed(2)}%</p>
+                <p>Y轴范围: ${yAxisMin.toFixed(2)} - ${yAxisMax.toFixed(2)}</p>
+                <p>0轴应该在: ${yesterdayClose.toFixed(2)}</p>
+            `;
+            
+            // 创建图表
+            const chart = echarts.init(document.getElementById('chart'));
+            
+            const option = {
+                backgroundColor: '#1a1a1a',
+                grid: {
+                    left: 80,
+                    right: 80,
+                    top: 40,
+                    bottom: 40
+                },
+                xAxis: {
+                    type: 'category',
+                    data: times,
+                    axisLine: { lineStyle: { color: '#555' } },
+                    axisLabel: { color: '#999' }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        position: 'left',
+                        min: yAxisMin,
+                        max: yAxisMax,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: {
+                            color: '#999',
+                            formatter: value => value.toFixed(2)
+                        },
+                        splitLine: {
+                            lineStyle: { color: '#333', type: 'dashed' }
+                        }
+                    },
+                    {
+                        type: 'value',
+                        position: 'right',
+                        min: yAxisMin,
+                        max: yAxisMax,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: {
+                            color: '#999',
+                            formatter: value => {
+                                const percent = ((value - yesterdayClose) / yesterdayClose) * 100;
+                                return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`;
+                            }
+                        },
+                        splitLine: { show: false }
+                    }
+                ],
+                series: [{
+                    name: '分时价',
+                    type: 'line',
+                    data: prices,
+                    smooth: false,
+                    symbol: 'none',
+                    lineStyle: {
+                        color: '#00bfff',
+                        width: 2
+                    },
+                    markLine: {
+                        silent: true,
+                        animation: false,
+                        data: [{
+                            yAxis: yesterdayClose,
+                            lineStyle: {
+                                color: '#ffffff',
+                                type: 'dashed',
+                                width: 2
+                            },
+                            label: {
+                                show: true,
+                                formatter: `昨收 ${yesterdayClose.toFixed(2)} (0.00%)`,
+                                position: 'end',
+                                color: '#ffffff'
+                            }
+                        }]
+                    }
+                }]
+            };
+            
+            chart.setOption(option);
+            
+            // 在图表上标记0轴位置
+            console.log('昨收价（0轴）:', yesterdayClose);
+            console.log('Y轴范围:', yAxisMin, '-', yAxisMax);
+            console.log('0轴在Y轴范围中的位置:', ((yesterdayClose - yAxisMin) / (yAxisMax - yAxisMin) * 100).toFixed(1) + '%');
+        }
+        
+        loadData();
+    </script>
+</body>
+</html>

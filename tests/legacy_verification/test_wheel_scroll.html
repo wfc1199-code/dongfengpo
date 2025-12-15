@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滚轮滚动测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            color: #e5e5e5;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+        
+        .header h1 {
+            color: #ff6b35;
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .debug-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff6b35;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .test-section {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            overflow: hidden;
+        }
+        
+        .test-header {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            padding: 15px 20px;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .test-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .test-stats {
+            font-size: 12px;
+            color: #999;
+        }
+        
+        /* 关键修复：确保滚动容器设置正确 */
+        .stock-list {
+            min-height: 200px;
+            max-height: 400px; /* 固定高度限制 */
+            overflow-y: scroll; /* 强制显示滚动条 */
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+            padding: 16px;
+            border: 1px solid #333;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            background: rgba(0, 0, 0, 0.1);
+            position: relative;
+            display: block; /* 确保块级显示 */
+            /* 确保可以接收滚轮事件 */
+            cursor: default;
+            user-select: none;
+            /* 强制滚动容器获得焦点 */
+            outline: none;
+        }
+        
+        /* 滚动条样式 */
+        .stock-list::-webkit-scrollbar {
+            width: 12px;
+        }
+        
+        .stock-list::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 107, 53, 0.1);
+        }
+        
+        .stock-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, rgba(255, 107, 53, 0.8) 0%, rgba(255, 107, 53, 0.6) 100%);
+            border-radius: 6px;
+            border: 1px solid rgba(255, 107, 53, 0.3);
+            min-height: 20px;
+        }
+        
+        .stock-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, rgba(255, 107, 53, 1) 0%, rgba(255, 107, 53, 0.8) 100%);
+            border-color: rgba(255, 107, 53, 0.5);
+        }
+        
+        .scroll-hint {
+            background: linear-gradient(135deg, rgba(255, 107, 53, 0.1) 0%, rgba(255, 107, 53, 0.05) 100%);
+            border: 1px solid rgba(255, 107, 53, 0.2);
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            backdrop-filter: blur(5px);
+        }
+        
+        .scroll-hint-text {
+            font-size: 11px;
+            color: #ff6b35;
+            font-weight: 500;
+        }
+        
+        .scroll-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+        
+        .scroll-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 1px solid;
+        }
+        
+        .scroll-btn.top {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: rgba(255, 107, 53, 0.3);
+            color: #ff6b35;
+        }
+        
+        .scroll-btn.bottom {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+        
+        .scroll-btn:hover {
+            opacity: 0.8;
+        }
+        
+        .stock-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: #111;
+            border: 1px solid #2a2a2a;
+            border-radius: 8px;
+            border-left: 3px solid #ff6b35;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .stock-item:hover {
+            background: #1a1a1a;
+            border-color: rgba(255, 107, 53, 0.3);
+            transform: translateX(3px);
+        }
+        
+        .stock-info {
+            flex: 1;
+        }
+        
+        .stock-name {
+            font-weight: 600;
+            font-size: 13px;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        
+        .stock-code {
+            font-size: 11px;
+            color: #999;
+            font-family: monospace;
+        }
+        
+        .prediction-score {
+            background: linear-gradient(45deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 40px;
+            text-align: center;
+        }
+        
+        .focus-indicator {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(16, 185, 129, 0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 9px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stock-list:focus .focus-indicator {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖱️ 滚轮滚动测试</h1>
+            <p>测试鼠标滚轮滚动功能</p>
+        </div>
+        
+        <div id="debugInfo" class="debug-info">
+            <div>🔄 准备测试滚轮滚动...</div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-header">
+                <div class="test-title">🚀 开盘冲刺测试</div>
+                <div class="test-stats">
+                    <span>50只测试股票</span>
+                    <span>09:30-09:45</span>
+                </div>
+            </div>
+            <div class="stock-list" id="testStockList" tabindex="0">
+                <div class="focus-indicator">已获得焦点</div>
+                <div class="scroll-hint">
+                    <span class="scroll-hint-text">📜 向下滚动查看更多股票 (50只)</span>
+                    <div style="font-size: 10px; color: #999; margin-top: 4px;">
+                        提示：将鼠标移到股票列表区域，然后使用滚轮滚动查看所有股票
+                    </div>
+                    <div style="font-size: 9px; color: #ff6b35; margin-top: 2px; font-weight: bold;">
+                        ⚠️ 如果滚轮不工作，请先点击股票列表区域，然后使用滚轮
+                    </div>
+                    <div class="scroll-buttons">
+                        <button class="scroll-btn top" onclick="scrollToTop()">
+                            ⬆️ 回到顶部
+                        </button>
+                        <button class="scroll-btn bottom" onclick="scrollToBottom()">
+                            ⬇️ 滚动到底部
+                        </button>
+                    </div>
+                </div>
+                <div id="stockItems">
+                    <!-- 股票项目将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let debugInfo = [];
+        
+        function addDebugInfo(message) {
+            debugInfo.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+            updateDebugDisplay();
+        }
+        
+        function updateDebugDisplay() {
+            const debugDiv = document.getElementById('debugInfo');
+            debugDiv.innerHTML = debugInfo.slice(-15).join('<br>');
+        }
+        
+        function generateTestStocks(count) {
+            const stocks = Array.from({ length: count }, (_, i) => ({
+                code: `TEST${String(i + 1).padStart(3, '0')}`,
+                name: `测试股票${i + 1}`,
+                changePercent: 2 + Math.random() * 6,
+                predictionScore: 70 + Math.random() * 25
+            }));
+            
+            return stocks;
+        }
+        
+        function renderStocks(stocks) {
+            const stockItemsDiv = document.getElementById('stockItems');
+            
+            let html = '';
+            stocks.forEach((stock, index) => {
+                html += `
+                    <div class="stock-item" onclick="handleStockClick('${stock.code}', '${stock.name}', ${index + 1}, ${stocks.length})">
+                        <div class="stock-info">
+                            <div class="stock-name">${stock.name}</div>
+                            <div class="stock-code">${stock.code} | 涨幅: ${stock.changePercent.toFixed(2)}%</div>
+                        </div>
+                        <div class="prediction-score">${stock.predictionScore.toFixed(0)}分</div>
+                    </div>
+                `;
+            });
+            
+            stockItemsDiv.innerHTML = html;
+        }
+        
+        function handleStockClick(code, name, index, total) {
+            addDebugInfo(`🖱️ 点击股票: ${name} (${code}) - 第${index}/${total}只`);
+        }
+        
+        function scrollToTop() {
+            const stockList = document.getElementById('testStockList');
+            if (stockList) {
+                stockList.scrollTo({ top: 0, behavior: 'smooth' });
+                addDebugInfo('⬆️ 滚动到顶部');
+            }
+        }
+        
+        function scrollToBottom() {
+            const stockList = document.getElementById('testStockList');
+            if (stockList) {
+                stockList.scrollTo({ top: stockList.scrollHeight, behavior: 'smooth' });
+                addDebugInfo('⬇️ 滚动到底部');
+            }
+        }
+        
+        // 初始化
+        function init() {
+            addDebugInfo('🔄 初始化测试环境...');
+            
+            // 生成测试股票
+            const testStocks = generateTestStocks(50);
+            renderStocks(testStocks);
+            
+            // 获取滚动容器
+            const stockList = document.getElementById('testStockList');
+            
+            // 添加滚动事件监听
+            stockList.addEventListener('scroll', () => {
+                const scrollTop = stockList.scrollTop;
+                const scrollHeight = stockList.scrollHeight;
+                const clientHeight = stockList.clientHeight;
+                const scrollPercent = Math.round((scrollTop / (scrollHeight - clientHeight)) * 100);
+                
+                if (scrollPercent > 0 && scrollPercent % 20 === 0) {
+                    addDebugInfo(`📜 滚动进度: ${scrollPercent}% (${scrollTop}/${scrollHeight - clientHeight})`);
+                }
+            });
+            
+            // 添加滚轮事件监听
+            stockList.addEventListener('wheel', (e) => {
+                addDebugInfo(`🖱️ 滚轮事件触发, deltaY: ${e.deltaY}, 方向: ${e.deltaY > 0 ? '向下' : '向上'}`);
+                // 确保滚轮事件不被阻止
+                e.stopPropagation();
+            });
+            
+            // 添加鼠标进入事件
+            stockList.addEventListener('mouseenter', () => {
+                stockList.focus();
+                addDebugInfo('🎯 鼠标进入滚动容器，获得焦点');
+            });
+            
+            // 添加焦点事件
+            stockList.addEventListener('focus', () => {
+                addDebugInfo('🎯 滚动容器获得焦点');
+            });
+            
+            stockList.addEventListener('blur', () => {
+                addDebugInfo('🎯 滚动容器失去焦点');
+            });
+            
+            // 添加点击事件
+            stockList.addEventListener('click', (e) => {
+                if (!e.target.closest('.stock-item')) {
+                    stockList.focus();
+                    addDebugInfo('🎯 点击滚动容器，获得焦点');
+                }
+            });
+            
+            addDebugInfo('✅ 测试环境初始化完成');
+            addDebugInfo('📋 测试步骤：');
+            addDebugInfo('1. 将鼠标移到股票列表区域');
+            addDebugInfo('2. 使用鼠标滚轮上下滚动');
+            addDebugInfo('3. 观察控制台输出的滚动信息');
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,595 @@
+//@version=6
+indicator('支撑压力系统-高精度版', 'SR Pro', overlay = true, max_lines_count = 30, max_labels_count = 30)
+
+// ============================================================================
+// 输入参数设置
+// ============================================================================
+
+// 固定支撑压力参数
+group_fixed = '固定支撑压力参数'
+fixed_length = input.int(240, '计算周期(分钟)', minval = 60, maxval = 1440, group = group_fixed)
+show_fixed = input.bool(true, '显示固定支撑压力线', group = group_fixed)
+
+// 动态支撑压力参数
+group_dynamic = '动态支撑压力参数'
+dynamic_window = input.int(20, '极值点识别窗口', minval = 5, maxval = 100, group = group_dynamic)
+min_touches = input.int(3, '最小触及次数', minval = 2, maxval = 10, group = group_dynamic)
+price_tolerance = input.float(0.002, '价格容忍度', minval = 0.001, maxval = 0.01, step = 0.001, group = group_dynamic)
+show_dynamic = input.bool(true, '显示动态支撑压力线', group = group_dynamic)
+
+// 成交量支撑压力参数
+group_volume = '成交量支撑压力参数'
+volume_length = input.int(25, '成交量计算周期', minval = 10, maxval = 100, group = group_volume)
+resistance_threshold = input.int(80, '阻力位成交量阈值(%)', minval = 50, maxval = 95, group = group_volume)
+support_threshold = input.int(80, '支撑位成交量阈值(%)', minval = 50, maxval = 95, group = group_volume)
+show_volume = input.bool(true, '显示成交量支撑压力线', group = group_volume)
+
+// 强度评级参数
+group_rating = '强度评级参数'
+show_rating = input.bool(true, '显示强度评级', group = group_rating)
+show_signals = input.bool(true, '显示交易信号', group = group_rating)
+
+// 高精度信号参数
+group_signal = '高精度信号参数'
+signal_tolerance = input.float(0.002, '信号触发容忍度(%)', minval = 0.001, maxval = 0.01, step = 0.001, group = group_signal)
+min_strength_rating = input.string('S', '最小强度评级', options = ['S', 'A', 'B', 'C', 'D'], group = group_signal)
+require_volume_confirmation = input.bool(true, '需要成交量确认', group = group_signal)
+min_volume_ratio = input.float(1.8, '最小成交量倍数', minval = 1.0, maxval = 3.0, step = 0.1, group = group_signal)
+require_price_bounce = input.bool(true, '需要价格反弹确认', group = group_signal)
+min_bounce_strength = input.float(0.003, '最小反弹强度(%)', minval = 0.001, maxval = 0.01, step = 0.001, group = group_signal)
+signal_cooldown = input.int(8, '信号冷却期(根K线)', minval = 1, maxval = 20, group = group_signal)
+
+// 多时间框架参数
+group_timeframe = '多时间框架参数'
+use_multi_timeframe = input.bool(true, '启用多时间框架确认', group = group_timeframe)
+trend_filter_period = input.int(20, '趋势过滤周期', minval = 10, maxval = 50, group = group_timeframe)
+confirmation_period = input.int(5, '确认周期', minval = 3, maxval = 15, group = group_timeframe)
+
+// 技术指标参数
+group_indicators = '技术指标参数'
+rsi_period = input.int(14, 'RSI周期', minval = 5, maxval = 30, group = group_indicators)
+rsi_overbought = input.int(70, 'RSI超买线', minval = 60, maxval = 80, group = group_indicators)
+rsi_oversold = input.int(30, 'RSI超卖线', minval = 20, maxval = 40, group = group_indicators)
+macd_fast = input.int(12, 'MACD快线', minval = 5, maxval = 20, group = group_indicators)
+macd_slow = input.int(26, 'MACD慢线', minval = 15, maxval = 35, group = group_indicators)
+macd_signal = input.int(9, 'MACD信号线', minval = 5, maxval = 15, group = group_indicators)
+
+// 显示设置
+group_display = '显示设置'
+line_width = input.int(2, '线条宽度', minval = 1, maxval = 5, group = group_display)
+show_labels = input.bool(true, '显示价格标签', group = group_display)
+show_alerts = input.bool(true, '启用警报', group = group_display)
+show_signal_quality = input.bool(true, '显示信号质量', group = group_display)
+
+// ============================================================================
+// 全局变量
+// ============================================================================
+
+// 存储极值点数据
+var array<float> peak_prices = array.new<float>()
+var array<int> peak_bars = array.new<int>()
+var array<float> trough_prices = array.new<float>()
+var array<int> trough_bars = array.new<int>()
+
+// 存储成交量数据
+var array<float> volume_data = array.new<float>()
+
+// 存储线条和标签的变量
+var line fixed_resistance_line = na
+var line fixed_support_line = na
+var line mid_point_line = na
+var label fixed_resistance_label = na
+var label fixed_support_label = na
+var label mid_point_label = na
+
+var line dynamic_resistance_line = na
+var line dynamic_support_line = na
+var label dynamic_resistance_label = na
+var label dynamic_support_label = na
+
+var line volume_resistance_line = na
+var line volume_support_line = na
+var label volume_resistance_label = na
+var label volume_support_label = na
+
+// 信号冷却期变量
+var int last_buy_signal_bar = 0
+var int last_sell_signal_bar = 0
+
+// 信号质量统计
+var int total_signals = 0
+var int successful_signals = 0
+
+// ============================================================================
+// 工具函数
+// ============================================================================
+
+// 计算成交量百分位
+volume_percentile(volumes, lookback) =>
+    if bar_index < lookback or array.size(volumes) == 0
+        50.0
+    else
+        current_vol = array.get(volumes, 0)
+        count = 0.0
+        array_size = array.size(volumes)
+        for i = 0 to math.min(lookback - 1, array_size - 1) by 1
+            vol_value = array.get(volumes, i)
+            if vol_value <= current_vol
+                count := count + 1
+        count / math.min(lookback, array_size) * 100
+
+// 计算ATR
+calculate_atr(period) =>
+    tr = math.max(high - low, math.max(math.abs(high - close[1]), math.abs(low - close[1])))
+    ta.rma(tr, period)
+
+// 识别局部极值点
+is_peak = high > high[1] and high > high[2] and high > high[3] and high > high[4] and high > high[5]
+is_trough = low < low[1] and low < low[2] and low < low[3] and low < low[4] and low < low[5]
+
+// 全局计算函数（确保一致性）
+period_high = ta.highest(high, fixed_length)
+period_low = ta.lowest(low, fixed_length)
+recent_high = ta.highest(high, volume_length)
+recent_low = ta.lowest(low, volume_length)
+atr_value = calculate_atr(20)
+
+// ============================================================================
+// 多时间框架分析
+// ============================================================================
+
+// 趋势过滤（模拟15分钟图）
+trend_ema = ta.ema(close, trend_filter_period)
+trend_up = close > trend_ema
+trend_down = close < trend_ema
+
+// 确认指标（模拟5分钟图）
+confirmation_ema = ta.ema(close, confirmation_period)
+confirmation_up = close > confirmation_ema
+confirmation_down = close < confirmation_ema
+
+// 技术指标计算
+rsi_value = ta.rsi(close, rsi_period)
+[macd_line, signal_line, macd_histogram] = ta.macd(close, macd_fast, macd_slow, macd_signal)
+
+// MACD金叉死叉
+macd_bullish = macd_line > signal_line and macd_line[1] <= signal_line[1]
+macd_bearish = macd_line < signal_line and macd_line[1] >= signal_line[1]
+
+// RSI超买超卖
+rsi_oversold_condition = rsi_value < rsi_oversold
+rsi_overbought_condition = rsi_value > rsi_overbought
+
+// ============================================================================
+// 固定支撑压力算法
+// ============================================================================
+
+calculate_fixed_sr() =>
+    if bar_index < fixed_length
+        [float(na), float(na), float(na)]
+    else
+        price_range = period_high - period_low
+
+        if price_range > 0
+            resistance = period_low + price_range * 7 / 8
+            support = period_low + price_range * 0.5 / 8
+            mid_point = period_low + price_range * 0.5
+            [resistance, support, mid_point]
+        else
+            [float(na), float(na), float(na)]
+
+// ============================================================================
+// 动态支撑压力算法
+// ============================================================================
+
+// 更新极值点
+if is_peak
+    array.push(peak_prices, high)
+    array.push(peak_bars, bar_index)
+    if array.size(peak_prices) > 50
+        array.shift(peak_prices)
+        array.shift(peak_bars)
+
+if is_trough
+    array.push(trough_prices, low)
+    array.push(trough_bars, bar_index)
+    if array.size(trough_prices) > 50
+        array.shift(trough_prices)
+        array.shift(trough_bars)
+
+// 价格聚类函数
+cluster_prices(prices, bars, level_type) =>
+    if array.size(prices) < min_touches
+        [float(na), 0, 0.0]
+    else // 计算平均价格
+        total = 0.0
+        for i = 0 to array.size(prices) - 1 by 1
+            total := total + array.get(prices, i)
+        avg_price = total / array.size(prices)
+
+        // 计算触及次数
+        touches = 0
+        total_volume = 0.0
+        for i = 0 to array.size(prices) - 1 by 1
+            price = array.get(prices, i)
+            if math.abs(price - avg_price) / avg_price <= price_tolerance
+                touches := touches + 1
+                if i < array.size(volume_data)
+                    total_volume := total_volume + array.get(volume_data, i)
+
+        if touches >= min_touches
+            avg_volume = total_volume / touches
+            [avg_price, touches, avg_volume]
+        else
+            [float(na), 0, 0.0]
+
+// 计算动态支撑压力
+[dynamic_resistance, resistance_touches, resistance_volume] = cluster_prices(peak_prices, peak_bars, 'resistance')
+[dynamic_support, support_touches, support_volume] = cluster_prices(trough_prices, trough_bars, 'support')
+
+// ============================================================================
+// 基于成交量的支撑压力算法
+// ============================================================================
+
+// 更新成交量数据
+array.push(volume_data, volume)
+if array.size(volume_data) > 200
+    array.shift(volume_data)
+
+// 计算成交量支撑压力
+calculate_volume_sr() =>
+    if bar_index < volume_length
+        [float(na), float(na)]
+    else // 计算成交量百分位
+        vol_percentile = volume_percentile(volume_data, 200)
+
+        volume_resistance = float(na)
+        volume_support = float(na)
+
+        // 检测阻力位
+        if high[1] == recent_high and high < recent_high and vol_percentile > resistance_threshold
+            volume_resistance := recent_high
+
+        // 检测支撑位
+        if low[1] == recent_low and low > recent_low and vol_percentile > support_threshold
+            volume_support := recent_low
+
+        [volume_resistance, volume_support]
+
+[volume_resistance, volume_support] = calculate_volume_sr()
+
+// ============================================================================
+// 强度评级系统
+// ============================================================================
+
+// 计算强度评级
+calculate_strength_rating(touches, volume_ratio, time_span) =>
+    // 触及次数得分
+    touches_score = math.min(touches * 10, 100)
+
+    // 成交量得分
+    volume_score = math.min(volume_ratio * 50, 100)
+
+    // 时间跨度得分
+    time_score = math.min(time_span / 10, 100)
+
+    // 综合得分
+    total_score = touches_score * 0.4 + volume_score * 0.3 + time_score * 0.3
+
+    // 确定评级
+    rating = if total_score >= 80
+        'S'
+    else if total_score >= 60
+        'A'
+    else if total_score >= 40
+        'B'
+    else if total_score >= 20
+        'C'
+    else
+        'D'
+
+    [total_score, rating]
+
+// ============================================================================
+// 主计算
+// ============================================================================
+
+[fixed_resistance, fixed_support, mid_point] = calculate_fixed_sr()
+
+// 计算强度评级
+[resistance_strength, resistance_rating] = calculate_strength_rating(resistance_touches, resistance_volume / ta.sma(volume, 20), 10)
+[support_strength, support_rating] = calculate_strength_rating(support_touches, support_volume / ta.sma(volume, 20), 10)
+
+// ============================================================================
+// 高精度信号生成系统
+// ============================================================================
+
+// 强度评级比较函数
+is_strength_ok(rating) =>
+    rating_priority = rating == 'S' ? 5 : rating == 'A' ? 4 : rating == 'B' ? 3 : rating == 'C' ? 2 : 1
+    min_priority = min_strength_rating == 'S' ? 5 : min_strength_rating == 'A' ? 4 : min_strength_rating == 'B' ? 3 : min_strength_rating == 'C' ? 2 : 1
+    rating_priority >= min_priority
+
+// 成交量确认函数
+volume_confirmation() =>
+    if not require_volume_confirmation
+        true
+    else
+        volume > ta.sma(volume, 20) * min_volume_ratio
+
+// 价格反弹确认函数
+price_bounce_confirmation() =>
+    if not require_price_bounce
+        true
+    else
+        // 买入信号：价格从支撑位反弹
+        bounce_up = close > open and (close - low) / low >= min_bounce_strength
+        // 卖出信号：价格从阻力位回落
+        bounce_down = close < open and (high - close) / close >= min_bounce_strength
+        bounce_up or bounce_down
+
+// 多时间框架确认函数
+multi_timeframe_confirmation(is_buy) =>
+    if not use_multi_timeframe
+        true
+    else
+        if is_buy
+            // 买入信号：大趋势向上，确认趋势向上
+            trend_up and confirmation_up
+        else
+            // 卖出信号：大趋势向下，确认趋势向下
+            trend_down and confirmation_down
+
+// 技术指标确认函数
+technical_confirmation(is_buy) =>
+    if is_buy
+        // 买入信号：RSI从超卖区反弹 或 MACD金叉
+        (rsi_oversold_condition and rsi_value > rsi_value[1]) or macd_bullish
+    else
+        // 卖出信号：RSI从超买区回落 或 MACD死叉
+        (rsi_overbought_condition and rsi_value < rsi_value[1]) or macd_bearish
+
+// 信号冷却期检查
+signal_cooldown_ok() =>
+    (bar_index - last_buy_signal_bar >= signal_cooldown) and (bar_index - last_sell_signal_bar >= signal_cooldown)
+
+// 检测价格接近支撑压力位（高精度容忍度）
+near_fixed_resistance = not na(fixed_resistance) and math.abs(close - fixed_resistance) / fixed_resistance <= signal_tolerance
+near_fixed_support = not na(fixed_support) and math.abs(close - fixed_support) / fixed_support <= signal_tolerance
+near_dynamic_resistance = not na(dynamic_resistance) and math.abs(close - dynamic_resistance) / dynamic_resistance <= signal_tolerance and is_strength_ok(resistance_rating)
+near_dynamic_support = not na(dynamic_support) and math.abs(close - dynamic_support) / dynamic_support <= signal_tolerance and is_strength_ok(support_rating)
+near_volume_resistance = not na(volume_resistance) and math.abs(close - volume_resistance) / volume_resistance <= signal_tolerance
+near_volume_support = not na(volume_support) and math.abs(close - volume_support) / volume_support <= signal_tolerance
+
+// 生成交易信号（高精度条件）
+buy_signal_raw = (near_fixed_support or near_dynamic_support or near_volume_support) and close > open
+sell_signal_raw = (near_fixed_resistance or near_dynamic_resistance or near_volume_resistance) and close < open
+
+// 应用所有高精度过滤条件
+buy_signal = buy_signal_raw and 
+             volume_confirmation() and 
+             price_bounce_confirmation() and 
+             multi_timeframe_confirmation(true) and
+             technical_confirmation(true) and
+             signal_cooldown_ok()
+
+sell_signal = sell_signal_raw and 
+              volume_confirmation() and 
+              price_bounce_confirmation() and 
+              multi_timeframe_confirmation(false) and
+              technical_confirmation(false) and
+              signal_cooldown_ok()
+
+// 信号质量评级
+get_signal_quality(is_buy) =>
+    quality_score = 0
+    
+    // 基础分数
+    if is_buy and (near_fixed_support or near_dynamic_support or near_volume_support)
+        quality_score := quality_score + 20
+    
+    // 成交量确认分数
+    if volume_confirmation()
+        quality_score := quality_score + 25
+    
+    // 多时间框架确认分数
+    if multi_timeframe_confirmation(is_buy)
+        quality_score := quality_score + 25
+    
+    // 技术指标确认分数
+    if technical_confirmation(is_buy)
+        quality_score := quality_score + 20
+    
+    // 价格反弹确认分数
+    if price_bounce_confirmation()
+        quality_score := quality_score + 10
+    
+    // 确定质量等级
+    if quality_score >= 90
+        'S'
+    else if quality_score >= 75
+        'A'
+    else if quality_score >= 60
+        'B'
+    else
+        'C'
+
+// 更新信号冷却期
+if buy_signal
+    last_buy_signal_bar := bar_index
+    total_signals := total_signals + 1
+if sell_signal
+    last_sell_signal_bar := bar_index
+    total_signals := total_signals + 1
+
+// ============================================================================
+// 绘图和标签（只在最后一根K线更新）
+// ============================================================================
+
+if barstate.islast
+    // 删除所有旧的线条和标签
+    if not na(fixed_resistance_line)
+        line.delete(fixed_resistance_line)
+    if not na(fixed_support_line)
+        line.delete(fixed_support_line)
+    if not na(mid_point_line)
+        line.delete(mid_point_line)
+    if not na(fixed_resistance_label)
+        label.delete(fixed_resistance_label)
+    if not na(fixed_support_label)
+        label.delete(fixed_support_label)
+    if not na(mid_point_label)
+        label.delete(mid_point_label)
+    
+    if not na(dynamic_resistance_line)
+        line.delete(dynamic_resistance_line)
+    if not na(dynamic_support_line)
+        line.delete(dynamic_support_line)
+    if not na(dynamic_resistance_label)
+        label.delete(dynamic_resistance_label)
+    if not na(dynamic_support_label)
+        label.delete(dynamic_support_label)
+    
+    if not na(volume_resistance_line)
+        line.delete(volume_resistance_line)
+    if not na(volume_support_line)
+        line.delete(volume_support_line)
+    if not na(volume_resistance_label)
+        label.delete(volume_resistance_label)
+    if not na(volume_support_label)
+        label.delete(volume_support_label)
+    
+    // 创建固定支撑压力线
+    if show_fixed and not na(fixed_resistance)
+        fixed_resistance_line := line.new(bar_index - fixed_length, fixed_resistance, bar_index, fixed_resistance, color = color.blue, width = line_width, style = line.style_solid)
+        if show_labels
+            fixed_resistance_label := label.new(bar_index, fixed_resistance, '固定阻力 ' + str.tostring(fixed_resistance, '#.##'), color = color.blue, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+    if show_fixed and not na(fixed_support)
+        fixed_support_line := line.new(bar_index - fixed_length, fixed_support, bar_index, fixed_support, color = color.red, width = line_width, style = line.style_solid)
+        if show_labels
+            fixed_support_label := label.new(bar_index, fixed_support, '固定支撑 ' + str.tostring(fixed_support, '#.##'), color = color.red, textcolor = color.white, style = label.style_label_up, size = size.small)
+
+    if show_fixed and not na(mid_point)
+        mid_point_line := line.new(bar_index - fixed_length, mid_point, bar_index, mid_point, color = color.gray, width = 1, style = line.style_dashed)
+        if show_labels
+            mid_point_label := label.new(bar_index, mid_point, '中轴 ' + str.tostring(mid_point, '#.##'), color = color.gray, textcolor = color.white, style = label.style_label_left, size = size.small)
+
+    // 创建动态支撑压力线
+    if show_dynamic and not na(dynamic_resistance)
+        line_color = resistance_rating == 'S' or resistance_rating == 'A' ? color.orange : color.yellow
+        line_style = resistance_rating == 'S' or resistance_rating == 'A' ? line.style_solid : line.style_dashed
+
+        dynamic_resistance_line := line.new(bar_index - 50, dynamic_resistance, bar_index, dynamic_resistance, color = line_color, width = line_width, style = line_style)
+        if show_labels and show_rating
+            label_text = '动态阻力 ' + str.tostring(dynamic_resistance, '#.##') + ' (' + resistance_rating + ')'
+            dynamic_resistance_label := label.new(bar_index, dynamic_resistance, label_text, color = line_color, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+    if show_dynamic and not na(dynamic_support)
+        line_color = support_rating == 'S' or support_rating == 'A' ? color.green : color.lime
+        line_style = support_rating == 'S' or support_rating == 'A' ? line.style_solid : line.style_dashed
+
+        dynamic_support_line := line.new(bar_index - 50, dynamic_support, bar_index, dynamic_support, color = line_color, width = line_width, style = line_style)
+        if show_labels and show_rating
+            label_text = '动态支撑 ' + str.tostring(dynamic_support, '#.##') + ' (' + support_rating + ')'
+            dynamic_support_label := label.new(bar_index, dynamic_support, label_text, color = line_color, textcolor = color.white, style = label.style_label_up, size = size.small)
+
+    // 创建成交量支撑压力线
+    if show_volume and not na(volume_resistance)
+        volume_resistance_line := line.new(bar_index - 30, volume_resistance, bar_index, volume_resistance, color = color.purple, width = line_width, style = line.style_dotted)
+        if show_labels
+            volume_resistance_label := label.new(bar_index, volume_resistance, '量阻 ' + str.tostring(volume_resistance, '#.##'), color = color.purple, textcolor = color.white, style = label.style_label_down, size = size.small)
+
+    if show_volume and not na(volume_support)
+        volume_support_line := line.new(bar_index - 30, volume_support, bar_index, volume_support, color = color.fuchsia, width = line_width, style = line.style_dotted)
+        if show_labels
+            volume_support_label := label.new(bar_index, volume_support, '量撑 ' + str.tostring(volume_support, '#.##'), color = color.fuchsia, textcolor = color.white, style = label.style_label_up, size = size.small)
+
+// ============================================================================
+// 高精度信号显示
+// ============================================================================
+
+// 获取信号质量
+buy_signal_quality = get_signal_quality(true)
+sell_signal_quality = get_signal_quality(false)
+
+// 根据信号质量选择显示样式
+buy_signal_color = buy_signal_quality == 'S' ? color.lime : buy_signal_quality == 'A' ? color.green : buy_signal_quality == 'B' ? color.yellow : color.orange
+sell_signal_color = sell_signal_quality == 'S' ? color.red : sell_signal_quality == 'A' ? color.maroon : sell_signal_quality == 'B' ? color.orange : color.yellow
+
+// 绘制信号（全局作用域）- 使用固定标题和大小
+plotshape(show_signals and buy_signal, '买入信号', shape.triangleup, location.belowbar, buy_signal_color, size = size.normal)
+plotshape(show_signals and sell_signal, '卖出信号', shape.triangledown, location.abovebar, sell_signal_color, size = size.normal)
+
+// 警报
+if show_alerts
+    if buy_signal
+        alert('买入信号(' + buy_signal_quality + '): 价格接近支撑位', alert.freq_once_per_bar)
+    if sell_signal
+        alert('卖出信号(' + sell_signal_quality + '): 价格接近阻力位', alert.freq_once_per_bar)
+
+// ============================================================================
+// 信息面板
+// ============================================================================
+
+if barstate.islast
+    var table info_table = table.new(position.top_right, 4, 8, bgcolor = color.white, border_width = 1)
+
+    table.cell(info_table, 0, 0, '支撑压力位', text_color = color.black, text_size = size.small)
+    table.cell(info_table, 1, 0, '价格', text_color = color.black, text_size = size.small)
+    table.cell(info_table, 2, 0, '评级', text_color = color.black, text_size = size.small)
+    table.cell(info_table, 3, 0, '质量', text_color = color.black, text_size = size.small)
+
+    row = 1
+
+    // 固定支撑压力位
+    if not na(fixed_resistance)
+        table.cell(info_table, 0, row, '固定阻力', text_color = color.blue, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(fixed_resistance, '#.##'), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, 'A', text_color = color.orange, text_size = size.tiny)
+        table.cell(info_table, 3, row, 'S', text_color = color.lime, text_size = size.tiny)
+        row := row + 1
+
+    if not na(fixed_support)
+        table.cell(info_table, 0, row, '固定支撑', text_color = color.red, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(fixed_support, '#.##'), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, 'A', text_color = color.orange, text_size = size.tiny)
+        table.cell(info_table, 3, row, 'S', text_color = color.lime, text_size = size.tiny)
+        row := row + 1
+
+    // 动态支撑压力位
+    if not na(dynamic_resistance)
+        table.cell(info_table, 0, row, '动态阻力', text_color = color.orange, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(dynamic_resistance, '#.##'), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, resistance_rating, text_color = color.orange, text_size = size.tiny)
+        table.cell(info_table, 3, row, resistance_rating, text_color = color.orange, text_size = size.tiny)
+        row := row + 1
+
+    if not na(dynamic_support)
+        table.cell(info_table, 0, row, '动态支撑', text_color = color.green, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(dynamic_support, '#.##'), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, support_rating, text_color = color.green, text_size = size.tiny)
+        table.cell(info_table, 3, row, support_rating, text_color = color.green, text_size = size.tiny)
+        row := row + 1
+
+    // 成交量支撑压力位
+    if not na(volume_resistance)
+        table.cell(info_table, 0, row, '量阻力', text_color = color.purple, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(volume_resistance, '#.##'), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, 'B', text_color = color.purple, text_size = size.tiny)
+        table.cell(info_table, 3, row, 'B', text_color = color.purple, text_size = size.tiny)
+        row := row + 1
+
+    if not na(volume_support)
+        table.cell(info_table, 0, row, '量支撑', text_color = color.fuchsia, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(volume_support, '#.##'), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, 'B', text_color = color.fuchsia, text_size = size.tiny)
+        table.cell(info_table, 3, row, 'B', text_color = color.fuchsia, text_size = size.tiny)
+        row := row + 1
+
+    // 信号统计
+    if show_signal_quality
+        table.cell(info_table, 0, row, '信号统计', text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 1, row, str.tostring(total_signals), text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 2, row, '今日', text_color = color.black, text_size = size.tiny)
+        table.cell(info_table, 3, row, '高精度', text_color = color.lime, text_size = size.tiny)

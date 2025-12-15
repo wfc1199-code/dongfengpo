@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90005854期权数据验证 - 最终版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e5e5e5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .data-panel {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+        
+        .data-label {
+            color: #999;
+        }
+        
+        .data-value {
+            color: #fff;
+            font-weight: bold;
+        }
+        
+        .btn {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #106ebe;
+        }
+        
+        .chart-container {
+            height: 400px;
+            margin-top: 20px;
+        }
+        
+        .raw-data {
+            background: #1a1a1a;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 90005854期权数据验证 - 最终版</h1>
+        
+        <div class="data-panel">
+            <h3>数据统计 (实时)</h3>
+            <div class="data-row">
+                <span class="data-label">API地址:</span>
+                <span class="data-value" id="apiUrl">http://localhost:9000/api/options/90005854/minute</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">请求时间:</span>
+                <span class="data-value" id="requestTime">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">数据点数:</span>
+                <span class="data-value" id="dataCount">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">开盘价:</span>
+                <span class="data-value" id="openPrice">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">收盘价:</span>
+                <span class="data-value" id="closePrice">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">日内变化:</span>
+                <span class="data-value" id="priceChange">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">价格范围:</span>
+                <span class="data-value" id="priceRange">-</span>
+            </div>
+            <div class="data-row">
+                <span class="data-label">最大波动:</span>
+                <span class="data-value" id="maxVolatility">-</span>
+            </div>
+            
+            <div style="text-align: center; margin-top: 15px;">
+                <button class="btn" onclick="loadFreshData(true)">🔄 强制刷新数据</button>
+                <button class="btn" onclick="loadFreshData(false)">📊 加载图表</button>
+                <button class="btn" onclick="showRawData()">📝 显示原始数据</button>
+            </div>
+            
+            <div id="rawDataContainer" class="raw-data" style="display: none;">
+                <h4>原始API响应:</h4>
+                <pre id="rawDataContent"></pre>
+            </div>
+        </div>
+        
+        <div class="data-panel">
+            <h3>分时图表</h3>
+            <div id="chart" class="chart-container"></div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let currentData = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            loadFreshData(false);
+        });
+        
+        // 初始化图表
+        function initChart() {
+            const chartDom = document.getElementById('chart');
+            chart = echarts.init(chartDom);
+        }
+        
+        // 加载数据
+        async function loadFreshData(forceRefresh = false) {
+            try {
+                const timestamp = new Date().getTime();
+                const url = forceRefresh 
+                    ? `http://localhost:9000/api/options/90005854/minute?_t=${timestamp}`
+                    : `http://localhost:9000/api/options/90005854/minute`;
+                
+                document.getElementById('requestTime').textContent = new Date().toLocaleTimeString();
+                document.getElementById('apiUrl').textContent = url;
+                
+                const response = await fetch(url, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                const data = await response.json();
+                currentData = data;
+                
+                if (data.status === 'success' && Array.isArray(data.data)) {
+                    analyzeData(data.data);
+                    renderChart(data.data);
+                } else {
+                    alert('数据格式错误: ' + JSON.stringify(data));
+                }
+                
+            } catch (error) {
+                alert('加载失败: ' + error.message);
+            }
+        }
+        
+        // 分析数据
+        function analyzeData(minuteData) {
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+            
+            const openPrice = prices[0];
+            const closePrice = prices[prices.length - 1];
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const priceChange = ((closePrice - openPrice) / openPrice * 100);
+            const maxVolatility = ((maxPrice - minPrice) / minPrice * 100);
+            const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+            
+            document.getElementById('dataCount').textContent = minuteData.length;
+            document.getElementById('openPrice').textContent = openPrice.toFixed(4);
+            document.getElementById('closePrice').textContent = closePrice.toFixed(4);
+            document.getElementById('priceChange').textContent = priceChange.toFixed(2) + '%';
+            document.getElementById('priceRange').textContent = `${minPrice.toFixed(4)} - ${maxPrice.toFixed(4)}`;
+            document.getElementById('maxVolatility').textContent = maxVolatility.toFixed(1) + '%';
+            
+            console.log('数据分析完成:', {
+                开盘价: openPrice,
+                收盘价: closePrice,
+                变化: priceChange + '%',
+                波动: maxVolatility + '%'
+            });
+        }
+        
+        // 显示原始数据
+        function showRawData() {
+            const container = document.getElementById('rawDataContainer');
+            const content = document.getElementById('rawDataContent');
+            
+            if (currentData) {
+                content.textContent = JSON.stringify(currentData, null, 2);
+                container.style.display = container.style.display === 'none' ? 'block' : 'none';
+            } else {
+                alert('请先加载数据');
+            }
+        }
+        
+        // 渲染图表
+        function renderChart(minuteData) {
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+            
+            const option = {
+                title: {
+                    text: `90005854 实时分时图 (${new Date().toLocaleTimeString()})`,
+                    textStyle: { color: '#fff' },
+                    left: 'center'
+                },
+                backgroundColor: '#1a1a1a',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#2a2a2a',
+                    borderColor: '#666',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        const time = params[0].axisValue;
+                        const price = params[0].value;
+                        const volume = params[1] ? params[1].value : 0;
+                        return `时间: ${time}<br/>价格: ${price.toFixed(4)}<br/>成交量: ${volume}`;
+                    }
+                },
+                grid: [
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '15%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '75%',
+                        bottom: '5%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: times,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: times,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: true,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            formatter: (value) => value.toFixed(4)
+                        },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { color: '#999' },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: '价格',
+                        type: 'line',
+                        data: prices,
+                        smooth: false,
+                        lineStyle: { color: '#1890ff', width: 2 },
+                        symbol: 'none',
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                    { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#52c41a' }
+                    }
+                ]
+            };
+            
+            chart.setOption(option, true);  // 强制重新渲染
+            console.log('图表渲染完成，价格范围:', Math.min(...prices).toFixed(4), '-', Math.max(...prices).toFixed(4));
+        }
+    </script>
+</body>
+</html>

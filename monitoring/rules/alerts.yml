@@ -1,0 +1,102 @@
+groups:
+  - name: dongfengpo_alerts
+    interval: 30s
+    rules:
+      # API可用性告警
+      - alert: APIDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "后端API服务下线"
+          description: "后端API服务已经下线超过1分钟"
+
+      # 高响应时间告警
+      - alert: HighResponseTime
+        expr: http_request_duration_seconds{quantile="0.99"} > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "API响应时间过高"
+          description: "99分位的响应时间超过1秒，当前值: {{ $value }}秒"
+
+      # 高错误率告警
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "API错误率过高"
+          description: "5分钟内错误率超过5%，当前值: {{ $value | humanizePercentage }}"
+
+      # 内存使用告警
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "内存使用率过高"
+          description: "内存使用率超过90%，当前值: {{ $value | humanizePercentage }}"
+
+      # CPU使用告警
+      - alert: HighCPUUsage
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "CPU使用率过高"
+          description: "CPU使用率超过80%，当前值: {{ $value }}%"
+
+      # 磁盘空间告警
+      - alert: LowDiskSpace
+        expr: (1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "磁盘空间不足"
+          description: "根分区使用率超过85%，当前值: {{ $value | humanizePercentage }}"
+
+      # 数据库连接池告警
+      - alert: DatabaseConnectionPoolExhausted
+        expr: postgresql_connections_active / postgresql_connections_max > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "数据库连接池即将耗尽"
+          description: "数据库连接使用率超过80%"
+
+      # Redis内存告警
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis内存使用率过高"
+          description: "Redis内存使用率超过80%"
+
+      # WebSocket连接数告警
+      - alert: TooManyWebSocketConnections
+        expr: websocket_connections_active > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: backend
+        annotations:
+          summary: "WebSocket连接数过多"
+          description: "活跃的WebSocket连接数超过1000，当前值: {{ $value }}"

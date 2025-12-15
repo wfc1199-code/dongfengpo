@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>清除缓存并测试</title>
+</head>
+<body>
+    <h1>清除前端缓存</h1>
+    <button onclick="clearCache()">清除LocalStorage和SessionStorage</button>
+    <button onclick="window.location.href='http://localhost:3000'">返回前端</button>
+
+    <div id="result"></div>
+
+    <script>
+        function clearCache() {
+            localStorage.clear();
+            sessionStorage.clear();
+            document.getElementById('result').innerHTML = '✅ 缓存已清除!请返回前端并硬刷新(Cmd+Shift+R)';
+        }
+
+        // 显示当前缓存内容
+        window.onload = () => {
+            let html = '<h2>当前缓存内容:</h2>';
+            html += '<h3>LocalStorage:</h3><pre>';
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                html += key + ': ' + localStorage.getItem(key) + '\n';
+            }
+            html += '</pre>';
+
+            html += '<h3>SessionStorage:</h3><pre>';
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                html += key + ': ' + sessionStorage.getItem(key) + '\n';
+            }
+            html += '</pre>';
+
+            document.getElementById('result').innerHTML = html;
+        };
+    </script>
+</body>
+</html>

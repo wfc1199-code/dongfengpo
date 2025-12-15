@@ -1,0 +1,7 @@
+-e ../../libs/data_contracts
+fastapi==0.109.2
+uvicorn==0.24.0
+redis==5.0.1
+pydantic-settings==2.0.3
+akshare>=1.12.0
+aiohttp>=3.8.0

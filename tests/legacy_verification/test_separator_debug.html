@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>分隔线调试测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #000;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .chart {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #333;
+        }
+        button {
+            padding: 10px 20px;
+            background: #00da3c;
+            color: #000;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: bold;
+        }
+        button:hover {
+            background: #00ff4c;
+        }
+        .info {
+            background: #111;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>5分钟K线分隔线调试</h1>
+    
+    <div class="info">
+        <p>测试分隔线显示功能，确保markLine正确渲染</p>
+    </div>
+    
+    <div>
+        <button onclick="testWithSeparators()">测试带分隔线</button>
+        <button onclick="testWithoutSeparators()">测试无分隔线</button>
+        <button onclick="testDifferentStyle()">测试不同样式分隔线</button>
+    </div>
+    
+    <div id="chart" class="chart"></div>
+
+    <script>
+        const chart = echarts.init(document.getElementById('chart'));
+        
+        // 生成跨多天的5分钟K线数据
+        function generateMultiDayData() {
+            const dates = [];
+            const klineData = [];
+            const volumes = [];
+            
+            // 生成5天的数据
+            const days = [
+                '2025-01-06', '2025-01-07', '2025-01-08', 
+                '2025-01-09', '2025-01-10'
+            ];
+            
+            days.forEach((day, dayIndex) => {
+                // 每天48根5分钟K线 (9:30-11:30, 13:00-15:00)
+                const morningHours = [
+                    '09:30', '09:35', '09:40', '09:45', '09:50', '09:55',
+                    '10:00', '10:05', '10:10', '10:15', '10:20', '10:25',
+                    '10:30', '10:35', '10:40', '10:45', '10:50', '10:55',
+                    '11:00', '11:05', '11:10', '11:15', '11:20', '11:25'
+                ];
+                
+                const afternoonHours = [
+                    '13:00', '13:05', '13:10', '13:15', '13:20', '13:25',
+                    '13:30', '13:35', '13:40', '13:45', '13:50', '13:55',
+                    '14:00', '14:05', '14:10', '14:15', '14:20', '14:25',
+                    '14:30', '14:35', '14:40', '14:45', '14:50', '14:55'
+                ];
+                
+                [...morningHours, ...afternoonHours].forEach((time, i) => {
+                    const basePrice = 10 + dayIndex * 0.2 + Math.sin(i / 10) * 0.5;
+                    const open = basePrice + Math.random() * 0.3 - 0.15;
+                    const close = basePrice + Math.random() * 0.3 - 0.15;
+                    const high = Math.max(open, close) + Math.random() * 0.1;
+                    const low = Math.min(open, close) - Math.random() * 0.1;
+                    const volume = Math.floor(Math.random() * 1000000) + 500000;
+                    
+                    dates.push(`${day} ${time}`);
+                    klineData.push([
+                        open.toFixed(2), 
+                        close.toFixed(2), 
+                        low.toFixed(2), 
+                        high.toFixed(2)
+                    ]);
+                    volumes.push(volume);
+                });
+            });
+            
+            return { dates, klineData, volumes };
+        }
+        
+        // 生成日期分隔线
+        function generateDaySeparators(dates) {
+            const separators = [];
+            let lastDate = null;
+            
+            dates.forEach((dateStr, index) => {
+                const currentDate = dateStr.split(' ')[0];
+                
+                if (lastDate && currentDate !== lastDate) {
+                    console.log(`检测到日期变化: ${lastDate} -> ${currentDate} at index ${index}`);
+                    
+                    separators.push({
+                        xAxis: index,
+                        lineStyle: {
+                            type: 'dashed',
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            width: 1.5,
+                            opacity: 0.5
+                        },
+                        label: {
+                            show: false
+                        }
+                    });
+                }
+                lastDate = currentDate;
+            });
+            
+            console.log(`生成了 ${separators.length} 条分隔线`);
+            return separators;
+        }
+        
+        function testWithSeparators() {
+            const { dates, klineData, volumes } = generateMultiDayData();
+            const separators = generateDaySeparators(dates);
+            
+            const option = {
+                title: {
+                    text: '5分钟K线图（带日期分隔线）',
+                    left: 'center',
+                    textStyle: { color: '#fff' }
+                },
+                backgroundColor: '#000',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' }
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '15%',
+                        height: '50%'
+                    },
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '70%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            interval: 47  // 每天显示一个标签
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: klineData,
+                        itemStyle: {
+                            color: '#ff4757',
+                            color0: '#2ed573',
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        },
+                        markLine: {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            lineStyle: {
+                                type: 'dashed',
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                width: 1.5,
+                                opacity: 0.5
+                            },
+                            label: {
+                                show: false
+                            },
+                            data: separators
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#4ecdc4' },
+                        markLine: {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            lineStyle: {
+                                type: 'dashed',
+                                color: 'rgba(255, 255, 255, 0.5)',
+                                width: 1.5,
+                                opacity: 0.5
+                            },
+                            label: {
+                                show: false
+                            },
+                            data: separators
+                        }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+            
+            // 输出调试信息
+            document.querySelector('.info').innerHTML += 
+                `<p>✅ 已加载带分隔线的图表，共 ${separators.length} 条分隔线</p>`;
+        }
+        
+        function testWithoutSeparators() {
+            const { dates, klineData, volumes } = generateMultiDayData();
+            
+            const option = {
+                title: {
+                    text: '5分钟K线图（无分隔线）',
+                    left: 'center',
+                    textStyle: { color: '#fff' }
+                },
+                backgroundColor: '#000',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' }
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '15%',
+                        height: '50%'
+                    },
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '70%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            interval: 47
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: klineData,
+                        itemStyle: {
+                            color: '#ff4757',
+                            color0: '#2ed573',
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#4ecdc4' }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+            
+            document.querySelector('.info').innerHTML += 
+                `<p>✅ 已加载无分隔线的图表</p>`;
+        }
+        
+        function testDifferentStyle() {
+            const { dates, klineData, volumes } = generateMultiDayData();
+            
+            // 生成不同样式的分隔线
+            const separators = [];
+            let lastDate = null;
+            
+            dates.forEach((dateStr, index) => {
+                const currentDate = dateStr.split(' ')[0];
+                
+                if (lastDate && currentDate !== lastDate) {
+                    separators.push({
+                        xAxis: index,
+                        lineStyle: {
+                            type: 'solid',  // 实线
+                            color: '#ff6b6b',  // 红色
+                            width: 2,  // 更粗
+                            opacity: 0.8
+                        },
+                        label: {
+                            show: true,
+                            formatter: currentDate.substring(5),
+                            position: 'start',
+                            color: '#ffcc00',
+                            fontSize: 12,
+                            backgroundColor: 'rgba(0,0,0,0.7)',
+                            padding: [2, 6]
+                        }
+                    });
+                }
+                lastDate = currentDate;
+            });
+            
+            const option = {
+                title: {
+                    text: '5分钟K线图（不同样式分隔线）',
+                    left: 'center',
+                    textStyle: { color: '#fff' }
+                },
+                backgroundColor: '#000',
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: { type: 'cross' }
+                },
+                grid: [
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '15%',
+                        height: '50%'
+                    },
+                    {
+                        left: '10%',
+                        right: '10%',
+                        top: '70%',
+                        height: '15%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { 
+                            color: '#ccc',
+                            rotate: 45,
+                            interval: 47
+                        }
+                    },
+                    {
+                        type: 'category',
+                        data: dates,
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        gridIndex: 0,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#555' } },
+                        axisLabel: { color: '#ccc' },
+                        splitLine: { lineStyle: { color: '#222' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线',
+                        type: 'candlestick',
+                        data: klineData,
+                        itemStyle: {
+                            color: '#ff4757',
+                            color0: '#2ed573',
+                            borderColor: '#ff4757',
+                            borderColor0: '#2ed573'
+                        },
+                        markLine: {
+                            symbol: 'none',
+                            animation: false,
+                            silent: true,
+                            data: separators
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#4ecdc4' }
+                    }
+                ]
+            };
+            
+            chart.setOption(option);
+            
+            document.querySelector('.info').innerHTML += 
+                `<p>✅ 已加载不同样式分隔线的图表</p>`;
+        }
+        
+        // 默认加载带分隔线的图表
+        testWithSeparators();
+    </script>
+</body>
+</html>

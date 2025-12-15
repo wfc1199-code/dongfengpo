@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90005854期权 - 真实数据版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background: #0a0a0a;
+            color: #e5e5e5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            color: #fff;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #52c41a;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .data-source {
+            background: linear-gradient(135deg, #1890ff, #52c41a);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #333;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .stat-value {
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #52c41a;
+        }
+        
+        .negative {
+            color: #ff4d4f;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #1890ff, #096dd9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+        }
+        
+        .btn.success {
+            background: linear-gradient(135deg, #52c41a, #389e0d);
+        }
+        
+        .chart-section {
+            background: linear-gradient(145deg, #2a2a2a, #1e1e1e);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-title {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .chart {
+            height: 450px;
+        }
+        
+        .real-time-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        
+        .pulse {
+            width: 8px;
+            height: 8px;
+            background: #52c41a;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(82, 196, 26, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(82, 196, 26, 0); }
+        }
+        
+        .api-info {
+            background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border-left: 4px solid #1890ff;
+        }
+        
+        .api-info h4 {
+            color: #1890ff;
+            margin-top: 0;
+        }
+        
+        .api-info code {
+            background: #0a0a0a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #52c41a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">90005854 期权实时数据</h1>
+            <p class="subtitle" id="optionName">中证500ETF沽9月2700</p>
+            <div class="data-source">🌐 真实市场数据 · 东方财富API</div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">最新价格</div>
+                <div class="stat-value" id="currentPrice">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">昨日收盘</div>
+                <div class="stat-value" id="yesterdayClose">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">涨跌幅</div>
+                <div class="stat-value" id="changePercent">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">行权价格</div>
+                <div class="stat-value" id="strikePrice">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">期权类型</div>
+                <div class="stat-value" id="callPut">--</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">更新时间</div>
+                <div class="stat-value" id="updateTime">--</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 30px;">
+            <button class="btn" onclick="refreshData()">🔄 刷新数据</button>
+            <button class="btn success" onclick="autoRefresh()">⚡ 自动刷新</button>
+        </div>
+        
+        <div class="chart-section">
+            <div class="chart-title">
+                <span>📈 实时分时图</span>
+                <div class="real-time-indicator">
+                    <div class="pulse"></div>
+                    <span>实时数据</span>
+                </div>
+            </div>
+            <div id="chart" class="chart"></div>
+        </div>
+        
+        <div class="api-info">
+            <h4>📡 数据源信息</h4>
+            <p><strong>API地址:</strong> <code>http://localhost:9000/api/options/90005854/info</code></p>
+            <p><strong>数据提供商:</strong> 东方财富金融终端</p>
+            <p><strong>更新频率:</strong> 30秒缓存，实时获取</p>
+            <p><strong>数据字段:</strong> 实时报价、成交量、行权价、到期时间等完整期权信息</p>
+            <p><strong>说明:</strong> 此为真实市场数据，如价格为0表示市场未开盘或该期权暂停交易</p>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let autoRefreshInterval = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            refreshData();
+        });
+        
+        // 初始化图表
+        function initChart() {
+            const chartDom = document.getElementById('chart');
+            chart = echarts.init(chartDom, 'dark');
+        }
+        
+        // 刷新数据
+        async function refreshData() {
+            try {
+                console.log('🔄 开始刷新真实数据...');
+                
+                // 并行获取期权信息和分时数据
+                const [infoResponse, minuteResponse] = await Promise.all([
+                    fetch(`http://localhost:9000/api/options/90005854/info?_t=${Date.now()}`),
+                    fetch(`http://localhost:9000/api/options/90005854/minute?_t=${Date.now()}`)
+                ]);
+                
+                const infoData = await infoResponse.json();
+                const minuteData = await minuteResponse.json();
+                
+                if (infoData.status === 'success' && minuteData.status === 'success') {
+                    updateStatsDisplay(infoData.info);
+                    renderChart(minuteData.data, infoData.info);
+                    console.log('✅ 真实数据刷新成功');
+                } else {
+                    console.error('❌ 数据获取失败:', infoData, minuteData);
+                    alert('数据获取失败，请检查网络连接');
+                }
+                
+            } catch (error) {
+                console.error('❌ 刷新失败:', error);
+                alert('刷新失败: ' + error.message);
+            }
+        }
+        
+        // 更新统计显示
+        function updateStatsDisplay(info) {
+            document.getElementById('optionName').textContent = info.name || '中证500ETF沽9月2700';
+            document.getElementById('currentPrice').textContent = (info.current_price || 0).toFixed(4);
+            document.getElementById('yesterdayClose').textContent = (info.yesterday_close || 0).toFixed(4);
+            document.getElementById('strikePrice').textContent = (info.strike_price || 0).toFixed(2);
+            document.getElementById('callPut').textContent = info.call_put || '认沽';
+            document.getElementById('updateTime').textContent = info.update_time || '--';
+            
+            // 设置涨跌幅颜色
+            const changeElement = document.getElementById('changePercent');
+            const changePercent = info.change_percent || 0;
+            changeElement.textContent = changePercent.toFixed(2) + '%';
+            changeElement.className = `stat-value ${changePercent >= 0 ? 'positive' : 'negative'}`;
+        }
+        
+        // 渲染图表
+        function renderChart(minuteData, optionInfo) {
+            if (!minuteData || minuteData.length === 0) {
+                console.warn('⚠️ 无分时数据');
+                return;
+            }
+            
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+            
+            // 计算价格统计
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
+            const yesterdayClose = optionInfo.yesterday_close || avgPrice;
+            
+            const option = {
+                title: {
+                    text: `${optionInfo.name} · 真实分时数据`,
+                    textStyle: { 
+                        color: '#fff',
+                        fontSize: 16
+                    },
+                    left: 'center',
+                    top: 10
+                },
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#2a2a2a',
+                    borderColor: '#1890ff',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        const time = params[0].axisValue;
+                        const price = params[0].value;
+                        const volume = params[1] ? params[1].value : 0;
+                        const change = yesterdayClose > 0 ? ((price - yesterdayClose) / yesterdayClose * 100) : 0;
+                        return `时间: ${time}<br/>价格: ${price.toFixed(4)}<br/>成交量: ${volume}<br/>涨跌: ${change.toFixed(2)}%`;
+                    }
+                },
+                grid: [
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '15%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '75%',
+                        bottom: '5%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: times,
+                        axisLine: { lineStyle: { color: '#404040' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: times,
+                        axisLine: { lineStyle: { color: '#404040' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        scale: true,
+                        axisLine: { lineStyle: { color: '#404040' } },
+                        axisLabel: { 
+                            color: '#999',
+                            formatter: (value) => value.toFixed(4)
+                        },
+                        splitLine: { 
+                            lineStyle: { 
+                                color: '#333',
+                                type: 'dashed'
+                            } 
+                        }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#404040' } },
+                        axisLabel: { color: '#999' },
+                        splitLine: { 
+                            lineStyle: { 
+                                color: '#333',
+                                type: 'dashed'
+                            } 
+                        }
+                    }
+                ],
+                series: [
+                    {
+                        name: '价格',
+                        type: 'line',
+                        data: prices,
+                        smooth: true,
+                        lineStyle: { 
+                            color: '#1890ff', 
+                            width: 2
+                        },
+                        symbol: 'circle',
+                        symbolSize: 4,
+                        showSymbol: false,
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(24, 144, 255, 0.4)' },
+                                    { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { 
+                            color: function(params) {
+                                const index = params.dataIndex;
+                                if (index === 0) return '#52c41a';
+                                const currentPrice = prices[index];
+                                const prevPrice = prices[index - 1];
+                                return currentPrice >= prevPrice ? '#f5222d' : '#52c41a';
+                            }
+                        }
+                    }
+                ]
+            };
+            
+            chart.setOption(option, true);
+            
+            console.log('✅ 图表渲染完成:', {
+                数据点: minuteData.length,
+                价格区间: `${minPrice.toFixed(4)} - ${maxPrice.toFixed(4)}`,
+                平均价格: avgPrice.toFixed(4)
+            });
+        }
+        
+        // 自动刷新
+        function autoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                document.querySelector('button[onclick="autoRefresh()"]').textContent = '⚡ 自动刷新';
+            } else {
+                autoRefreshInterval = setInterval(refreshData, 30000); // 30秒刷新一次
+                document.querySelector('button[onclick="autoRefresh()"]').textContent = '⏹ 停止自动刷新';
+                alert('已启动自动刷新（30秒间隔）');
+            }
+        }
+    </script>
+</body>
+</html>

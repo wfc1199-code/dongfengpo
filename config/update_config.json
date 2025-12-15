@@ -1,0 +1,75 @@
+{
+  "update_strategy": {
+    "mode": "unified",
+    "interval": 3.0,
+    "comment": "基于Level1 API特性，3秒是最优选择"
+  },
+  
+  "api_sources": {
+    "primary": {
+      "name": "sina",
+      "url": "http://hq.sinajs.cn/list=",
+      "batch_size": 50,
+      "api_interval": 3.0,
+      "description": "新浪财经Level1数据，3秒更新"
+    },
+    "backup": {
+      "name": "tencent",
+      "url": "http://qt.gtimg.cn/q=",
+      "batch_size": 30,
+      "api_interval": 3.0,
+      "description": "腾讯财经备用源"
+    }
+  },
+  
+  "performance": {
+    "batch_size": 50,
+    "connection_pool_size": 100,
+    "request_timeout": 5,
+    "cache_ttl": 2.5,
+    "comment": "缓存2.5秒，比API更新周期略短"
+  },
+  
+  "adaptive_mode": {
+    "enabled": true,
+    "rules": {
+      "market_open": {
+        "time": "09:30-10:00",
+        "interval": 2.0,
+        "comment": "开盘半小时加快更新"
+      },
+      "key_moment": {
+        "time": "10:25-10:35",
+        "interval": 2.0,
+        "comment": "10:30关键时刻"
+      },
+      "market_close": {
+        "time": "14:30-15:00",
+        "interval": 2.0,
+        "comment": "尾盘加快更新"
+      },
+      "normal": {
+        "time": "other",
+        "interval": 3.0,
+        "comment": "正常时段"
+      },
+      "after_hours": {
+        "time": "15:00-09:15",
+        "interval": 30.0,
+        "comment": "非交易时间"
+      }
+    }
+  },
+  
+  "monitoring": {
+    "log_stats_every": 100,
+    "alert_on_error_rate": 0.1,
+    "alert_on_response_time": 1000
+  },
+  
+  "test_mode": {
+    "enabled": false,
+    "force_interval": null,
+    "debug_logging": false
+  }
+}

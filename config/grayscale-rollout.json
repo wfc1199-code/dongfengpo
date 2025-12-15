@@ -1,0 +1,207 @@
+{
+  "rollout_plan": {
+    "name": "Phase 3 - Signal API Grayscale Rollout",
+    "start_date": "2025-10-01",
+    "total_duration_days": 10,
+    "stages": [
+      {
+        "stage": "stage-0",
+        "name": "Preparation & Baseline",
+        "rollout_percentage": 0,
+        "duration_days": 1,
+        "start_date": "2025-10-01",
+        "end_date": "2025-10-01",
+        "status": "completed",
+        "description": "Establish baseline metrics, ensure all systems are ready",
+        "success_criteria": {
+          "signal_api_health": "healthy",
+          "legacy_api_health": "healthy",
+          "baseline_established": true
+        }
+      },
+      {
+        "stage": "stage-1",
+        "name": "Initial Rollout (10%)",
+        "rollout_percentage": 10,
+        "duration_days": 2,
+        "start_date": "2025-10-02",
+        "end_date": "2025-10-03",
+        "status": "pending",
+        "description": "Roll out to 10% of users, monitor closely for any issues",
+        "success_criteria": {
+          "error_rate": "<1%",
+          "p95_latency": "<200ms",
+          "user_feedback": "positive",
+          "no_critical_bugs": true
+        },
+        "rollback_trigger": {
+          "error_rate": ">5%",
+          "p95_latency": ">500ms",
+          "critical_bugs": true
+        }
+      },
+      {
+        "stage": "stage-2",
+        "name": "Expanded Rollout (30%)",
+        "rollout_percentage": 30,
+        "duration_days": 2,
+        "start_date": "2025-10-04",
+        "end_date": "2025-10-05",
+        "status": "pending",
+        "description": "Expand to 30% after validating 10% success",
+        "success_criteria": {
+          "error_rate": "<1%",
+          "p95_latency": "<200ms",
+          "signal_api_vs_legacy": "similar or better",
+          "no_degradation": true
+        },
+        "rollback_trigger": {
+          "error_rate": ">3%",
+          "p95_latency": ">400ms",
+          "user_complaints": ">5"
+        }
+      },
+      {
+        "stage": "stage-3",
+        "name": "Majority Rollout (50%)",
+        "rollout_percentage": 50,
+        "duration_days": 2,
+        "start_date": "2025-10-06",
+        "end_date": "2025-10-07",
+        "status": "pending",
+        "description": "Reach 50% users, perform A/B testing comparison",
+        "success_criteria": {
+          "error_rate": "<0.5%",
+          "p95_latency": "<180ms",
+          "signal_api_performance": "better than legacy",
+          "stable_24h": true
+        },
+        "rollback_trigger": {
+          "error_rate": ">2%",
+          "p95_latency": ">350ms",
+          "performance_regression": true
+        }
+      },
+      {
+        "stage": "stage-4",
+        "name": "Near Full Rollout (80%)",
+        "rollout_percentage": 80,
+        "duration_days": 2,
+        "start_date": "2025-10-08",
+        "end_date": "2025-10-09",
+        "status": "pending",
+        "description": "Expand to 80%, prepare for full migration",
+        "success_criteria": {
+          "error_rate": "<0.3%",
+          "p95_latency": "<150ms",
+          "all_metrics_green": true,
+          "confidence_level": "high"
+        },
+        "rollback_trigger": {
+          "error_rate": ">1.5%",
+          "p95_latency": ">300ms"
+        }
+      },
+      {
+        "stage": "stage-5",
+        "name": "Full Rollout (100%)",
+        "rollout_percentage": 100,
+        "duration_days": 1,
+        "start_date": "2025-10-10",
+        "end_date": "2025-10-10",
+        "status": "pending",
+        "description": "Complete migration to Signal API, Legacy API as backup only",
+        "success_criteria": {
+          "error_rate": "<0.2%",
+          "p95_latency": "<120ms",
+          "migration_complete": true,
+          "legacy_api_backup_ready": true
+        },
+        "rollback_trigger": {
+          "error_rate": ">1%",
+          "critical_system_failure": true
+        }
+      }
+    ]
+  },
+  "feature_flags": {
+    "anomalyDetection": {
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "forceUsers": [],
+      "blockUsers": []
+    },
+    "limitUpPrediction": {
+      "enabled": true,
+      "rolloutPercentage": 100,
+      "forceUsers": [],
+      "blockUsers": []
+    },
+    "global": {
+      "useNewArchitecture": true,
+      "fallbackToLegacy": true,
+      "debug": false
+    }
+  },
+  "monitoring": {
+    "dashboards": [
+      {
+        "name": "Signal API Performance",
+        "url": "http://localhost:8000/docs",
+        "metrics": [
+          "response_time",
+          "error_rate",
+          "throughput"
+        ]
+      },
+      {
+        "name": "Legacy API Performance",
+        "url": "http://localhost:9000/docs",
+        "metrics": [
+          "response_time",
+          "error_rate",
+          "throughput"
+        ]
+      }
+    ],
+    "alerts": {
+      "error_rate_threshold": 5,
+      "latency_p95_threshold": 500,
+      "notification_channels": [
+        "console",
+        "log"
+      ]
+    }
+  },
+  "rollback_procedure": {
+    "manual_rollback": {
+      "step1": "Set rolloutPercentage to 0 in feature flags",
+      "step2": "Verify all traffic routes to Legacy API",
+      "step3": "Investigate Signal API issues",
+      "step4": "Fix issues and prepare for retry"
+    },
+    "automatic_rollback": {
+      "enabled": false,
+      "triggers": [
+        "error_rate > 10%",
+        "p95_latency > 1000ms",
+        "critical_bug_detected"
+      ]
+    }
+  },
+  "testing_users": {
+    "internal_testers": [
+      "user_001",
+      "user_002",
+      "user_003"
+    ],
+    "beta_testers": [],
+    "production_whitelist": []
+  },
+  "notes": {
+    "phase3_week1": "Completed - Signal API client and Feature Flags implemented",
+    "phase3_week2": "Completed - Unified Service and Performance Monitor integrated",
+    "phase3_week3": "In Progress - Grayscale rollout 0% \u2192 30%",
+    "phase3_week4": "Planned - Grayscale rollout 30% \u2192 100%"
+  }
+}

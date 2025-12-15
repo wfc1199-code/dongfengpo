@@ -1,0 +1,182 @@
+{
+  "$defs": {
+    "OpportunityState": {
+      "description": "Lifecycle for aggregated opportunities.",
+      "enum": [
+        "NEW",
+        "ACTIVE",
+        "TRACKING",
+        "CLOSED"
+      ],
+      "title": "OpportunityState",
+      "type": "string"
+    },
+    "StrategySignal": {
+      "description": "Normalized strategy output.",
+      "properties": {
+        "confidence": {
+          "description": "置信度",
+          "maximum": 1.0,
+          "minimum": 0.0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "metadata": {
+          "description": "附加元数据",
+          "title": "Metadata",
+          "type": "object"
+        },
+        "reasons": {
+          "description": "触发原因列表",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "signal_type": {
+          "description": "信号类型",
+          "title": "Signal Type",
+          "type": "string"
+        },
+        "strategy": {
+          "description": "策略名称或标识",
+          "title": "Strategy",
+          "type": "string"
+        },
+        "strength_score": {
+          "description": "强度评分",
+          "minimum": 0.0,
+          "title": "Strength Score",
+          "type": "number"
+        },
+        "symbol": {
+          "description": "证券代码",
+          "title": "Symbol",
+          "type": "string"
+        },
+        "triggered_at": {
+          "description": "信号触发时间",
+          "format": "date-time",
+          "title": "Triggered At",
+          "type": "string"
+        },
+        "window": {
+          "description": "对应的特征窗口标识",
+          "title": "Window",
+          "type": "string"
+        }
+      },
+      "required": [
+        "strategy",
+        "symbol",
+        "signal_type",
+        "confidence",
+        "strength_score",
+        "triggered_at",
+        "window"
+      ],
+      "title": "StrategySignal",
+      "type": "object"
+    }
+  },
+  "description": "Aggregated opportunity composed of multiple strategy signals.",
+  "example": {
+    "confidence": 0.82,
+    "created_at": "2024-03-08T09:38:00+08:00",
+    "id": "sh600000-1709888400",
+    "notes": [
+      "策略 rapid-rise 触发"
+    ],
+    "signals": [
+      {
+        "confidence": 0.82,
+        "metadata": {
+          "avg_price": 12.4,
+          "price": 12.56
+        },
+        "reasons": [
+          "涨幅 2.3%"
+        ],
+        "signal_type": "rapid_rise",
+        "strategy": "rapid-rise",
+        "strength_score": 76.5,
+        "symbol": "sh600000",
+        "triggered_at": "2024-03-08T09:38:05+08:00",
+        "window": "5s"
+      }
+    ],
+    "state": "NEW",
+    "strength_score": 76.5,
+    "symbol": "sh600000",
+    "updated_at": "2024-03-08T09:38:05+08:00"
+  },
+  "properties": {
+    "confidence": {
+      "description": "综合置信度",
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Confidence",
+      "type": "number"
+    },
+    "created_at": {
+      "description": "首次创建时间",
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "id": {
+      "description": "机会唯一标识",
+      "title": "Id",
+      "type": "string"
+    },
+    "notes": {
+      "description": "备注信息",
+      "items": {
+        "type": "string"
+      },
+      "title": "Notes",
+      "type": "array"
+    },
+    "signals": {
+      "description": "关联策略信号",
+      "items": {
+        "$ref": "#/$defs/StrategySignal"
+      },
+      "title": "Signals",
+      "type": "array"
+    },
+    "state": {
+      "$ref": "#/$defs/OpportunityState",
+      "default": "NEW",
+      "description": "机会状态"
+    },
+    "strength_score": {
+      "description": "综合强度评分",
+      "minimum": 0.0,
+      "title": "Strength Score",
+      "type": "number"
+    },
+    "symbol": {
+      "description": "证券代码",
+      "title": "Symbol",
+      "type": "string"
+    },
+    "updated_at": {
+      "description": "最近更新时间",
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "symbol",
+    "created_at",
+    "updated_at",
+    "confidence",
+    "strength_score"
+  ],
+  "title": "OpportunitySignal",
+  "type": "object"
+}

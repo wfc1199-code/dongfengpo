@@ -1,0 +1,62 @@
+{
+  "$defs": {
+    "RiskSeverity": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ],
+      "title": "RiskSeverity",
+      "type": "string"
+    }
+  },
+  "description": "Risk notifications connected to opportunities or symbols.",
+  "properties": {
+    "message": {
+      "description": "风险说明",
+      "title": "Message",
+      "type": "string"
+    },
+    "metadata": {
+      "description": "附加信息",
+      "title": "Metadata",
+      "type": "object"
+    },
+    "opportunity_id": {
+      "description": "关联机会 ID",
+      "title": "Opportunity Id",
+      "type": "string"
+    },
+    "risk_type": {
+      "description": "风险类型标识",
+      "title": "Risk Type",
+      "type": "string"
+    },
+    "severity": {
+      "$ref": "#/$defs/RiskSeverity",
+      "description": "风险等级"
+    },
+    "symbol": {
+      "description": "证券代码",
+      "title": "Symbol",
+      "type": "string"
+    },
+    "triggered_at": {
+      "description": "触发时间",
+      "format": "date-time",
+      "title": "Triggered At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "symbol",
+    "risk_type",
+    "severity",
+    "message",
+    "triggered_at",
+    "opportunity_id"
+  ],
+  "title": "RiskAlert",
+  "type": "object"
+}

@@ -1,0 +1,6 @@
+-e ../../libs/data_contracts
+redis==5.0.1
+pydantic==2.5.3
+pydantic-settings==2.0.3
+pandas>=2.0
+pyarrow>=13.0

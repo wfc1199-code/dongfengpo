@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>期权分时图修复测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        .chart-container {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            font-size: 14px;
+        }
+        button:hover { opacity: 0.8; }
+        .controls {
+            padding: 15px;
+            background: #f8f9fa;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .status {
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .data-sample {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .data-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+        }
+        .data-item strong {
+            color: #007bff;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 期权分时图修复测试</h1>
+
+        <div class="controls">
+            <button onclick="testMO2511Call()">📈 测试 MO2511-C-7500 (看涨)</button>
+            <button onclick="testMO2511Put()">📉 测试 MO2511-P-7500 (看跌)</button>
+            <button onclick="clearChart()">🗑️ 清空图表</button>
+        </div>
+
+        <div id="status" class="status info">等待测试...</div>
+
+        <div class="section">
+            <h3>📊 分时图显示</h3>
+            <div id="minuteChart" class="chart-container"></div>
+        </div>
+
+        <div class="section">
+            <h3>📋 数据样本</h3>
+            <div id="dataSample" class="data-sample">无数据</div>
+        </div>
+
+        <div class="section">
+            <h3>🔧 API原始响应</h3>
+            <pre id="rawResponse">等待API调用...</pre>
+        </div>
+
+        <div class="section">
+            <h3>🔍 数据分析</h3>
+            <div id="dataAnalysis">无分析</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9000/api/options';
+        let chart = null;
+
+        // 初始化图表
+        function initChart() {
+            chart = echarts.init(document.getElementById('minuteChart'));
+            window.addEventListener('resize', () => chart.resize());
+        }
+
+        // 显示状态
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.innerHTML = message;
+        }
+
+        // 测试看涨期权
+        async function testMO2511Call() {
+            await testOptionMinuteData('MO2511-C-7500', '中证1000看涨期权');
+        }
+
+        // 测试看跌期权
+        async function testMO2511Put() {
+            await testOptionMinuteData('MO2511-P-7500', '中证1000看跌期权');
+        }
+
+        // 测试期权分时数据
+        async function testOptionMinuteData(optionCode, optionName) {
+            showStatus(`正在获取 ${optionName} 分时数据...`, 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/${optionCode}/minute`);
+                const data = await response.json();
+
+                // 显示原始响应
+                document.getElementById('rawResponse').textContent = JSON.stringify(data, null, 2);
+
+                if (response.ok && data.status === 'success') {
+                    const minuteData = data.minute_data || data.data || [];
+
+                    if (minuteData && minuteData.length > 0) {
+                        showStatus(`✅ 成功获取 ${minuteData.length} 条分时数据`, 'success');
+                        analyzeAndDisplayData(data, minuteData);
+                    } else {
+                        showStatus('❌ 没有分时数据', 'error');
+                    }
+                } else {
+                    showStatus(`❌ 获取失败: ${data.message || data.detail || '未知错误'}`, 'error');
+                }
+            } catch (error) {
+                showStatus(`❌ 网络错误: ${error.message}`, 'error');
+                document.getElementById('rawResponse').textContent = `网络错误: ${error.message}`;
+            }
+        }
+
+        // 分析并显示数据
+        function analyzeAndDisplayData(apiResponse, minuteData) {
+            // 数据分析
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+
+            const firstTime = times[0];
+            const lastTime = times[times.length - 1];
+            const firstPrice = prices[0];
+            const lastPrice = prices[prices.length - 1];
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+
+            const priceChange = ((lastPrice - firstPrice) / firstPrice * 100).toFixed(2);
+
+            // 显示分析结果
+            const analysis = `
+                <strong>📊 数据统计:</strong><br>
+                期权代码: ${apiResponse.code}<br>
+                数据来源: ${apiResponse.source || apiResponse.note || '未知'}<br>
+                数据点数: ${minuteData.length}<br>
+                时间范围: ${firstTime} - ${lastTime}<br>
+                价格范围: ¥${minPrice.toFixed(4)} - ¥${maxPrice.toFixed(4)}<br>
+                涨跌幅: ${priceChange}%<br>
+                数据日期: ${apiResponse.data_date || '今日'}<br><br>
+
+                <strong>✅ 验证结果:</strong><br>
+                时间格式: ${/^\d{2}:\d{2}$/.test(firstTime) ? '✅ 正确' : '❌ 错误'}<br>
+                价格合理性: ${firstPrice > 10 && firstPrice < 200 ? '✅ 合理' : '❌ 异常'}<br>
+                数据完整性: ${minuteData.length > 50 ? '✅ 充分' : '❌ 不充分'}
+            `;
+            document.getElementById('dataAnalysis').innerHTML = analysis;
+
+            // 显示数据样本
+            const sampleHtml = minuteData.slice(0, 8).map((item, index) => `
+                <div class="data-item">
+                    <strong>${item.time}</strong><br>
+                    ¥${item.price.toFixed(4)}<br>
+                    ${item.change_percent > 0 ? '+' : ''}${item.change_percent}%<br>
+                    Vol: ${item.volume}
+                </div>
+            `).join('');
+            document.getElementById('dataSample').innerHTML = sampleHtml;
+
+            // 绘制图表
+            drawChart(minuteData);
+        }
+
+        // 绘制图表
+        function drawChart(minuteData) {
+            if (!chart) {
+                initChart();
+            }
+
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+
+            const option = {
+                title: {
+                    text: `期权分时图 (${minuteData.length}个数据点)`,
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    },
+                    formatter: function(params) {
+                        const time = params[0].axisValue;
+                        const price = params[0].data;
+                        const volume = params[1] ? params[1].data : 0;
+                        return `时间: ${time}<br/>价格: ¥${price.toFixed(4)}<br/>成交量: ${volume}`;
+                    }
+                },
+                legend: {
+                    data: ['价格', '成交量'],
+                    top: 30
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '15%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    data: times,
+                    axisLabel: {
+                        rotate: 45,
+                        interval: Math.floor(times.length / 20)
+                    }
+                },
+                yAxis: [
+                    {
+                        type: 'value',
+                        name: '价格 (元)',
+                        position: 'left',
+                        scale: true,
+                        axisLabel: {
+                            formatter: '¥{value}'
+                        }
+                    },
+                    {
+                        type: 'value',
+                        name: '成交量',
+                        position: 'right',
+                        scale: true
+                    }
+                ],
+                series: [
+                    {
+                        name: '价格',
+                        type: 'line',
+                        data: prices,
+                        smooth: true,
+                        lineStyle: {
+                            width: 2
+                        },
+                        itemStyle: {
+                            color: '#ff4757'
+                        },
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(255, 71, 87, 0.3)' },
+                                    { offset: 1, color: 'rgba(255, 71, 87, 0.1)' }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: {
+                            color: 'rgba(52, 152, 219, 0.6)'
+                        }
+                    }
+                ],
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        start: 0,
+                        end: 100
+                    }
+                ]
+            };
+
+            chart.setOption(option, true);
+        }
+
+        // 清空图表
+        function clearChart() {
+            if (chart) {
+                chart.clear();
+            }
+            document.getElementById('status').className = 'status info';
+            document.getElementById('status').innerHTML = '等待测试...';
+            document.getElementById('rawResponse').textContent = '等待API调用...';
+            document.getElementById('dataSample').innerHTML = '无数据';
+            document.getElementById('dataAnalysis').innerHTML = '无分析';
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+        });
+    </script>
+</body>
+</html>

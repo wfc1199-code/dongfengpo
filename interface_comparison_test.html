@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>东风破 - 前端界面对比测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .interface-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .panel-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .panel-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-old {
+            background: #ffa726;
+            color: white;
+        }
+
+        .badge-new {
+            background: #66bb6a;
+            color: white;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .feature-icon {
+            font-size: 20px;
+        }
+
+        .feature-text {
+            flex: 1;
+            font-size: 14px;
+            color: #555;
+        }
+
+        .feature-status {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+        }
+
+        .status-basic {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-advanced {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-missing {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .comparison-table {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        tbody tr:hover {
+            background: #f5f5f5;
+        }
+
+        .check-yes {
+            color: #4caf50;
+            font-size: 20px;
+        }
+
+        .check-no {
+            color: #f44336;
+            font-size: 20px;
+        }
+
+        .check-partial {
+            color: #ff9800;
+            font-size: 20px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .btn-old {
+            background: #ffa726;
+            color: white;
+        }
+
+        .btn-new {
+            background: #66bb6a;
+            color: white;
+        }
+
+        .summary-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .summary-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 前端界面重构对比</h1>
+            <p>技术演示 vs 实战交易平台</p>
+        </div>
+
+        <div class="comparison-grid">
+            <div class="interface-panel">
+                <div class="panel-header">
+                    <span class="panel-title">📱 旧版演示界面</span>
+                    <span class="panel-badge badge-old">Demo版</span>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <span class="feature-icon">🔌</span>
+                        <span class="feature-text">基础WebSocket连接展示</span>
+                        <span class="feature-status status-basic">基础</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📋</span>
+                        <span class="feature-text">简单机会列表显示</span>
+                        <span class="feature-status status-basic">基础</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-text">基本统计信息</span>
+                        <span class="feature-status status-basic">基础</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📝</span>
+                        <span class="feature-text">系统日志显示</span>
+                        <span class="feature-status status-basic">基础</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">❌</span>
+                        <span class="feature-text">无智能评分系统</span>
+                        <span class="feature-status status-missing">缺失</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">❌</span>
+                        <span class="feature-text">无筛选和排序功能</span>
+                        <span class="feature-status status-missing">缺失</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">❌</span>
+                        <span class="feature-text">无风险评估</span>
+                        <span class="feature-status status-missing">缺失</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">❌</span>
+                        <span class="feature-text">无预期涨幅计算</span>
+                        <span class="feature-status status-missing">缺失</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="interface-panel">
+                <div class="panel-header">
+                    <span class="panel-title">🚀 新版交易平台</span>
+                    <span class="panel-badge badge-new">实战版</span>
+                </div>
+                <ul class="feature-list">
+                    <li class="feature-item">
+                        <span class="feature-icon">🎯</span>
+                        <span class="feature-text">智能机会发现 (综合评分)</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">⭐</span>
+                        <span class="feature-text">多维度评分算法 (4项指标)</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">🔥</span>
+                        <span class="feature-text">热门机会标记 (90+分)</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📈</span>
+                        <span class="feature-text">预期涨幅预测</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">⚠️</span>
+                        <span class="feature-text">风险等级评估 (三级分类)</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">🔍</span>
+                        <span class="feature-text">高级筛选器 (3种过滤条件)</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">📊</span>
+                        <span class="feature-text">智能排序 (4种排序方式)</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                    <li class="feature-item">
+                        <span class="feature-icon">💎</span>
+                        <span class="feature-text">实时市场概览面板</span>
+                        <span class="feature-status status-advanced">高级</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="comparison-table">
+            <h2 style="margin-bottom: 20px; color: #333;">📊 功能对比详表</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>功能项</th>
+                        <th style="text-align: center;">旧版演示界面</th>
+                        <th style="text-align: center;">新版交易平台</th>
+                        <th>改进说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>WebSocket实时连接</strong></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>保持功能，优化连接状态显示</td>
+                    </tr>
+                    <tr>
+                        <td><strong>机会列表显示</strong></td>
+                        <td style="text-align: center;"><span class="check-partial">△</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>从简单列表升级为卡片式展示</td>
+                    </tr>
+                    <tr>
+                        <td><strong>智能评分系统</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增40%信心+30%强度+15%信号+15%趋势</td>
+                    </tr>
+                    <tr>
+                        <td><strong>星级评价显示</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增5星评级系统(90+=5星)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>热门机会标记</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增🔥标记(90分以上)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>预期涨幅计算</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增(confidence × strength)/10算法</td>
+                    </tr>
+                    <tr>
+                        <td><strong>风险等级评估</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增低/中/高三级风险分类</td>
+                    </tr>
+                    <tr>
+                        <td><strong>高级筛选功能</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增信心度/评分/风险三重筛选</td>
+                    </tr>
+                    <tr>
+                        <td><strong>智能排序</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增按评分/信心/强度/时间排序</td>
+                    </tr>
+                    <tr>
+                        <td><strong>市场概览面板</strong></td>
+                        <td style="text-align: center;"><span class="check-partial">△</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>升级为多维度统计面板</td>
+                    </tr>
+                    <tr>
+                        <td><strong>详细信息展示</strong></td>
+                        <td style="text-align: center;"><span class="check-partial">△</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增模态框详情页</td>
+                    </tr>
+                    <tr>
+                        <td><strong>策略信号展示</strong></td>
+                        <td style="text-align: center;"><span class="check-partial">△</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>分类展示多策略信号</td>
+                    </tr>
+                    <tr>
+                        <td><strong>自选股管理</strong></td>
+                        <td style="text-align: center;"><span class="check-no">✗</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>新增收藏功能</td>
+                    </tr>
+                    <tr>
+                        <td><strong>响应式设计</strong></td>
+                        <td style="text-align: center;"><span class="check-partial">△</span></td>
+                        <td style="text-align: center;"><span class="check-yes">✓</span></td>
+                        <td>优化移动端体验</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="summary-panel">
+            <div class="summary-title">🎯 核心改进总结</div>
+            <p style="color: #666; margin: 20px 0; line-height: 1.8;">
+                新版交易平台从技术演示转型为实战工具，核心目标是<strong style="color: #667eea;">帮助用户发现可能大涨的股票</strong>。
+                通过多维度评分算法、智能筛选排序、风险评估和涨幅预测，将原始数据转化为可执行的交易决策。
+            </p>
+            <div class="summary-stats">
+                <div class="stat-card">
+                    <div class="stat-number">14+</div>
+                    <div class="stat-label">新增核心功能</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">4维</div>
+                    <div class="stat-label">综合评分指标</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">3级</div>
+                    <div class="stat-label">风险分类体系</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <a href="frontend_websocket_demo.html" class="btn btn-old" target="_blank">
+                📱 查看旧版演示界面
+            </a>
+            <a href="trading_opportunity_hub.html" class="btn btn-new" target="_blank">
+                🚀 体验新版交易平台
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔍 前端界面对比测试页面已加载');
+        console.log('旧版: frontend_websocket_demo.html - 技术演示');
+        console.log('新版: trading_opportunity_hub.html - 实战交易平台');
+    </script>
+</body>
+</html>

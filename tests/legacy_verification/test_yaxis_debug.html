@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Y轴调试</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .case { margin: 20px 0; padding: 15px; border: 1px solid #333; background: #2a2a2a; }
+        .error { color: #f44336; }
+        .success { color: #4CAF50; }
+        .warning { color: #FF9800; }
+    </style>
+</head>
+<body>
+    <h1>分时图Y轴刻度测试</h1>
+    <div id="results"></div>
+
+    <script>
+        function testYAxis(code, name, yesterdayClose) {
+            // 判断涨跌停
+            let limitPercent = 0.1;
+            const pureCode = code.replace(/^(sh|sz|hk)/, '');
+            
+            if (pureCode.startsWith('688') || pureCode.startsWith('689')) {
+                limitPercent = 0.2;
+            } else if (pureCode.startsWith('300')) {
+                limitPercent = 0.2;
+            }
+            
+            const yAxisMax = yesterdayClose * (1 + limitPercent);
+            const yAxisMin = yesterdayClose * (1 - limitPercent);
+            const interval = (yAxisMax - yAxisMin) / 4;
+            
+            // 生成Y轴刻度
+            const ticks = [];
+            for (let i = 0; i <= 4; i++) {
+                const value = yAxisMin + interval * i;
+                const percent = ((value - yesterdayClose) / yesterdayClose * 100);
+                ticks.push({
+                    value: value.toFixed(2),
+                    percent: percent.toFixed(2) + '%'
+                });
+            }
+            
+            // 检查0轴是否在刻度中
+            const hasZeroTick = ticks.some(t => Math.abs(parseFloat(t.value) - yesterdayClose) < 0.01);
+            
+            const div = document.createElement('div');
+            div.className = 'case';
+            div.innerHTML = `
+                <h3>${name} (${code}) - ${limitPercent * 100}%涨跌幅</h3>
+                <div>昨收价: ${yesterdayClose.toFixed(2)}</div>
+                <div>Y轴范围: [${yAxisMin.toFixed(2)}, ${yAxisMax.toFixed(2)}]</div>
+                <div>刻度间隔: ${interval.toFixed(2)}</div>
+                <div style="margin-top: 10px;">Y轴刻度点:</div>
+                <ul>
+                    ${ticks.map((t, i) => {
+                        const isZero = Math.abs(parseFloat(t.value) - yesterdayClose) < 0.01;
+                        return `<li class="${isZero ? 'success' : ''}">${t.value} (${t.percent}) ${isZero ? '← 0轴' : ''}</li>`;
+                    }).join('')}
+                </ul>
+                <div class="${hasZeroTick ? 'success' : 'error'}">
+                    ${hasZeroTick ? '✓ 0轴在刻度点上' : '✗ 0轴不在刻度点上（这会导致显示问题）'}
+                </div>
+            `;
+            
+            return div;
+        }
+        
+        const resultsDiv = document.getElementById('results');
+        
+        // 测试不同股票
+        resultsDiv.appendChild(testYAxis('002864', '盘龙药业', 32.50));
+        resultsDiv.appendChild(testYAxis('688291', '金橙子', 29.03));
+        resultsDiv.appendChild(testYAxis('000001', '平安银行', 10.00));
+        resultsDiv.appendChild(testYAxis('600519', '贵州茅台', 1500.00));
+        
+        // 添加说明
+        const note = document.createElement('div');
+        note.style.marginTop = '30px';
+        note.style.padding = '20px';
+        note.style.background = '#2a2a2a';
+        note.style.borderRadius = '5px';
+        note.innerHTML = `
+            <h2>📝 问题分析</h2>
+            <p class="warning">当使用 <code>interval = (max - min) / 4</code> 时：</p>
+            <ul>
+                <li>Y轴会被等分为4段</li>
+                <li>生成5个刻度点（0,1,2,3,4）</li>
+                <li><strong>0轴（昨收价）不一定在刻度点上！</strong></li>
+            </ul>
+            <h3>解决方案</h3>
+            <p class="success">让ECharts自动计算刻度，或者强制让0轴成为中间刻度点：</p>
+            <ul>
+                <li>方案1: 不设置 <code>interval</code>，让ECharts自动计算</li>
+                <li>方案2: 设置 <code>splitNumber: 4</code> 替代 <code>interval</code></li>
+                <li>方案3: 手动计算刻度，确保昨收价在中间</li>
+            </ul>
+        `;
+        resultsDiv.appendChild(note);
+    </script>
+</body>
+</html>

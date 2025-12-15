@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全市场AI异动检测系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: #0a0e27;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.9);
+            margin-top: 5px;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .controls {
+            background: #1a1f3a;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .control-group label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .control-group select,
+        .control-group input {
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background: #0d1020;
+            color: #e0e0e0;
+            font-size: 14px;
+            min-width: 150px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            background: #1a1f3a;
+            border-radius: 12px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            color: #888;
+            text-transform: uppercase;
+        }
+        
+        .stat-card.extreme {
+            background: linear-gradient(135deg, #ff0000 0%, #ff6600 100%);
+        }
+        
+        .stat-card.strong {
+            background: linear-gradient(135deg, #ff6600 0%, #ff9900 100%);
+        }
+        
+        .stat-card.active {
+            background: linear-gradient(135deg, #ff9900 0%, #ffcc00 100%);
+        }
+        
+        .stock-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .stock-card {
+            background: #1a1f3a;
+            border-radius: 12px;
+            padding: 15px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border-color: #667eea;
+        }
+        
+        .stock-card.extreme-strong {
+            border-color: #ff0000;
+            background: linear-gradient(135deg, rgba(255,0,0,0.1) 0%, rgba(255,102,0,0.1) 100%);
+        }
+        
+        .stock-card.strong {
+            border-color: #ff6600;
+            background: linear-gradient(135deg, rgba(255,102,0,0.1) 0%, rgba(255,153,0,0.1) 100%);
+        }
+        
+        .stock-card.active {
+            border-color: #ff9900;
+            background: linear-gradient(135deg, rgba(255,153,0,0.1) 0%, rgba(255,204,0,0.1) 100%);
+        }
+        
+        .stock-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .stock-info {
+            flex: 1;
+        }
+        
+        .stock-code {
+            font-size: 16px;
+            font-weight: bold;
+            color: #4a9eff;
+        }
+        
+        .stock-name {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 2px;
+        }
+        
+        .stock-price {
+            text-align: right;
+        }
+        
+        .price-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .price-change {
+            font-size: 14px;
+            margin-top: 2px;
+        }
+        
+        .price-up {
+            color: #ff4444;
+        }
+        
+        .price-down {
+            color: #00d269;
+        }
+        
+        .stock-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+        
+        .metric-label {
+            color: #888;
+        }
+        
+        .metric-value {
+            color: #fff;
+            font-weight: 600;
+        }
+        
+        .anomaly-reasons {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #333;
+        }
+        
+        .anomaly-tag {
+            display: inline-block;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid #667eea;
+            color: #8ba3ff;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        
+        .anomaly-level {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+            color: #888;
+        }
+        
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+        
+        .auto-refresh {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #1a1f3a;
+            border: 2px solid #667eea;
+            border-radius: 50px;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        
+        .refresh-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #00ff00;
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 全市场AI异动检测系统</h1>
+        <div class="subtitle">实时扫描A股全市场 · AI智能预测 · 捕捉异动先机</div>
+    </div>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label>异动类型</label>
+                <select id="anomalyType">
+                    <option value="all">所有异动</option>
+                    <option value="volume_surge">成交量异动</option>
+                    <option value="price_surge">价格异动</option>
+                    <option value="speed_surge">涨速异动</option>
+                    <option value="continuous_rise">连续上涨</option>
+                    <option value="limit_approaching">接近涨停</option>
+                    <option value="breakout">突破</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>显示数量</label>
+                <input type="number" id="limitCount" value="50" min="10" max="200">
+            </div>
+            
+            <button class="btn btn-primary" onclick="scanMarket()">立即扫描</button>
+            <button class="btn btn-success" onclick="getAIPrediction()">AI预测</button>
+            <button class="btn btn-warning" onclick="getRanking()">实时排行</button>
+            
+            <div style="margin-left: auto;">
+                <label>
+                    <input type="checkbox" id="autoRefresh" checked> 自动刷新 (10秒)
+                </label>
+            </div>
+        </div>
+        
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="value" id="totalCount">0</div>
+                <div class="label">总异动数</div>
+            </div>
+            <div class="stat-card extreme">
+                <div class="value" id="extremeCount">0</div>
+                <div class="label">极强异动</div>
+            </div>
+            <div class="stat-card strong">
+                <div class="value" id="strongCount">0</div>
+                <div class="label">强势异动</div>
+            </div>
+            <div class="stat-card active">
+                <div class="value" id="activeCount">0</div>
+                <div class="label">活跃异动</div>
+            </div>
+        </div>
+        
+        <div id="stockGrid" class="stock-grid">
+            <div class="loading">正在扫描全市场</div>
+        </div>
+    </div>
+    
+    <div class="auto-refresh" id="refreshStatus">
+        <div class="refresh-indicator"></div>
+        <span>自动刷新中</span>
+    </div>
+    
+    <script>
+        let autoRefreshInterval = null;
+        
+        // 页面加载时自动扫描
+        window.onload = function() {
+            scanMarket();
+            setupAutoRefresh();
+        };
+        
+        // 设置自动刷新
+        function setupAutoRefresh() {
+            const checkbox = document.getElementById('autoRefresh');
+            const refreshStatus = document.getElementById('refreshStatus');
+            
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    startAutoRefresh();
+                    refreshStatus.style.display = 'flex';
+                } else {
+                    stopAutoRefresh();
+                    refreshStatus.style.display = 'none';
+                }
+            });
+            
+            if (checkbox.checked) {
+                startAutoRefresh();
+            }
+        }
+        
+        function startAutoRefresh() {
+            stopAutoRefresh(); // 清除之前的定时器
+            autoRefreshInterval = setInterval(() => {
+                scanMarket();
+            }, 10000); // 10秒刷新一次
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+        }
+        
+        // 扫描市场
+        async function scanMarket() {
+            const anomalyType = document.getElementById('anomalyType').value;
+            const limit = document.getElementById('limitCount').value;
+            
+            const stockGrid = document.getElementById('stockGrid');
+            stockGrid.innerHTML = '<div class="loading">正在扫描全市场</div>';
+            
+            try {
+                const response = await fetch(`http://localhost:9000/api/market-anomaly/scan?anomaly_type=${anomalyType}&limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    updateStats(data.stats);
+                    displayStocks(data.stocks);
+                }
+            } catch (error) {
+                console.error('扫描失败:', error);
+                stockGrid.innerHTML = '<div class="no-data">扫描失败，请稍后重试</div>';
+            }
+        }
+        
+        // AI预测
+        async function getAIPrediction() {
+            const limit = document.getElementById('limitCount').value;
+            const stockGrid = document.getElementById('stockGrid');
+            stockGrid.innerHTML = '<div class="loading">AI正在分析预测</div>';
+            
+            try {
+                const response = await fetch(`http://localhost:9000/api/market-anomaly/ai-prediction?limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayPredictions(data.predictions);
+                    
+                    // 更新统计
+                    document.getElementById('totalCount').textContent = data.total_predicted;
+                    document.getElementById('extremeCount').textContent = data.predictions.filter(s => s.prediction_level === '高概率').length;
+                    document.getElementById('strongCount').textContent = data.predictions.filter(s => s.prediction_level === '中概率').length;
+                    document.getElementById('activeCount').textContent = data.predictions.filter(s => s.prediction_level === '低概率').length;
+                }
+            } catch (error) {
+                console.error('AI预测失败:', error);
+                stockGrid.innerHTML = '<div class="no-data">AI预测失败，请稍后重试</div>';
+            }
+        }
+        
+        // 获取排行榜
+        async function getRanking() {
+            const limit = document.getElementById('limitCount').value;
+            const stockGrid = document.getElementById('stockGrid');
+            stockGrid.innerHTML = '<div class="loading">正在获取排行榜</div>';
+            
+            try {
+                const response = await fetch(`http://localhost:9000/api/market-anomaly/realtime-ranking?ranking_type=comprehensive&limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    displayStocks(data.rankings);
+                }
+            } catch (error) {
+                console.error('获取排行榜失败:', error);
+                stockGrid.innerHTML = '<div class="no-data">获取排行榜失败，请稍后重试</div>';
+            }
+        }
+        
+        // 更新统计
+        function updateStats(stats) {
+            document.getElementById('totalCount').textContent = stats.total_count || 0;
+            document.getElementById('extremeCount').textContent = stats.extreme_strong || 0;
+            document.getElementById('strongCount').textContent = stats.strong || 0;
+            document.getElementById('activeCount').textContent = stats.active || 0;
+        }
+        
+        // 显示股票列表
+        function displayStocks(stocks) {
+            const stockGrid = document.getElementById('stockGrid');
+            
+            if (!stocks || stocks.length === 0) {
+                stockGrid.innerHTML = '<div class="no-data">暂无异动股票</div>';
+                return;
+            }
+            
+            stockGrid.innerHTML = stocks.map(stock => createStockCard(stock)).join('');
+        }
+        
+        // 显示AI预测
+        function displayPredictions(predictions) {
+            const stockGrid = document.getElementById('stockGrid');
+            
+            if (!predictions || predictions.length === 0) {
+                stockGrid.innerHTML = '<div class="no-data">暂无预测结果</div>';
+                return;
+            }
+            
+            stockGrid.innerHTML = predictions.map(stock => createPredictionCard(stock)).join('');
+        }
+        
+        // 创建股票卡片
+        function createStockCard(stock) {
+            const levelClass = stock.anomaly_level === '极强' ? 'extreme-strong' : 
+                              stock.anomaly_level === '强势' ? 'strong' : 
+                              stock.anomaly_level === '活跃' ? 'active' : '';
+            
+            const priceClass = stock.change_percent >= 0 ? 'price-up' : 'price-down';
+            const changeSymbol = stock.change_percent >= 0 ? '+' : '';
+            
+            return `
+                <div class="stock-card ${levelClass}" onclick="openF10('${stock.code}')">
+                    <div class="anomaly-level" style="background: ${stock.level_color}">
+                        ${stock.anomaly_level} (${stock.anomaly_score}分)
+                    </div>
+                    
+                    <div class="stock-header">
+                        <div class="stock-info">
+                            <div class="stock-code">${stock.code}</div>
+                            <div class="stock-name">${stock.name}</div>
+                        </div>
+                        <div class="stock-price">
+                            <div class="price-value ${priceClass}">¥${stock.price.toFixed(2)}</div>
+                            <div class="price-change ${priceClass}">${changeSymbol}${stock.change_percent.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-metrics">
+                        <div class="metric">
+                            <span class="metric-label">成交量</span>
+                            <span class="metric-value">${(stock.volume / 10000).toFixed(2)}万手</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">成交额</span>
+                            <span class="metric-value">${(stock.amount / 100000000).toFixed(2)}亿</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">换手率</span>
+                            <span class="metric-value">${stock.turnover_rate.toFixed(2)}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">量比</span>
+                            <span class="metric-value">${stock.volume_ratio.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">振幅</span>
+                            <span class="metric-value">${stock.amplitude.toFixed(2)}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">5分钟涨速</span>
+                            <span class="metric-value">${stock.speed_5min.toFixed(2)}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="anomaly-reasons">
+                        ${stock.anomaly_reasons.map(reason => 
+                            `<span class="anomaly-tag">${reason}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 创建预测卡片
+        function createPredictionCard(stock) {
+            const priceClass = stock.change_percent >= 0 ? 'price-up' : 'price-down';
+            const changeSymbol = stock.change_percent >= 0 ? '+' : '';
+            
+            return `
+                <div class="stock-card" onclick="openF10('${stock.code}')">
+                    <div class="anomaly-level" style="background: ${stock.prediction_color}">
+                        AI预测: ${stock.prediction_level} (${stock.prediction_score}分)
+                    </div>
+                    
+                    <div class="stock-header">
+                        <div class="stock-info">
+                            <div class="stock-code">${stock.code}</div>
+                            <div class="stock-name">${stock.name}</div>
+                        </div>
+                        <div class="stock-price">
+                            <div class="price-value ${priceClass}">¥${stock.price.toFixed(2)}</div>
+                            <div class="price-change ${priceClass}">${changeSymbol}${stock.change_percent.toFixed(2)}%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stock-metrics">
+                        <div class="metric">
+                            <span class="metric-label">成交量</span>
+                            <span class="metric-value">${(stock.volume / 10000).toFixed(2)}万手</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">量比</span>
+                            <span class="metric-value">${stock.volume_ratio.toFixed(2)}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">换手率</span>
+                            <span class="metric-value">${stock.turnover_rate.toFixed(2)}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">5分钟涨速</span>
+                            <span class="metric-value">${stock.speed_5min.toFixed(2)}%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="anomaly-reasons">
+                        ${stock.prediction_reasons.map(reason => 
+                            `<span class="anomaly-tag">📈 ${reason}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 打开F10页面
+        function openF10(code) {
+            window.open(`http://basic.10jqka.com.cn/${code}/`, '_blank');
+        }
+    </script>
+</body>
+</html>

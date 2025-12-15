@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>F10数据测试</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .result { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: #f5f5f5; 
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        .error { background: #fee; color: red; }
+        .success { background: #efe; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>F10数据API测试</h1>
+    
+    <div>
+        <input type="text" id="stockCode" value="000001" placeholder="股票代码">
+        <button onclick="testAPI()">测试API</button>
+        <button onclick="testDirect()">直接获取数据</button>
+    </div>
+    
+    <div id="result" class="result">等待测试...</div>
+    
+    <script>
+        // 测试API
+        async function testAPI() {
+            const stockCode = document.getElementById('stockCode').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.textContent = '正在测试API...';
+            
+            try {
+                // 测试基本信息接口
+                const response = await fetch(`http://localhost:9000/api/f10/basic/${stockCode}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '成功获取数据:\n' + JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '错误: ' + error.message;
+            }
+        }
+        
+        // 直接使用现有API获取数据
+        async function testDirect() {
+            const stockCode = document.getElementById('stockCode').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.textContent = '正在获取实时数据...';
+            
+            try {
+                // 使用已经工作的实时数据接口
+                const response = await fetch(`http://localhost:9000/api/stocks/${stockCode}/realtime`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                resultDiv.className = 'result success';
+                resultDiv.textContent = '成功获取实时数据:\n' + JSON.stringify(data, null, 2);
+                
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '错误: ' + error.message;
+            }
+        }
+        
+        // 页面加载时自动测试
+        window.onload = function() {
+            // 先测试实时数据接口
+            testDirect();
+        };
+    </script>
+</body>
+</html>

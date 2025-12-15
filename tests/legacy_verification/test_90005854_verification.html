@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>90005854期权数据验证 - 真实价格版</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #e5e5e5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .stats-panel {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #52c41a;
+        }
+        
+        .negative {
+            color: #ff4d4f;
+        }
+        
+        .btn {
+            background: #0078d4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #106ebe;
+        }
+        
+        .chart-container {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .chart {
+            height: 400px;
+        }
+        
+        .comparison-table {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #404040;
+        }
+        
+        th {
+            background: #1a1a1a;
+            color: #fff;
+        }
+        
+        .correct {
+            color: #52c41a;
+        }
+        
+        .incorrect {
+            color: #ff4d4f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 90005854期权数据验证 - 真实价格版</h1>
+        
+        <div class="stats-panel">
+            <div class="stat-card">
+                <div class="stat-label">期权代码</div>
+                <div class="stat-value">90005854</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">期权名称</div>
+                <div class="stat-value" id="optionName">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">最新价</div>
+                <div class="stat-value" id="currentPrice">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">涨跌幅</div>
+                <div class="stat-value" id="changePercent">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">开盘价</div>
+                <div class="stat-value" id="openPrice">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">价格区间</div>
+                <div class="stat-value" id="priceRange">-</div>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+            <button class="btn" onclick="loadData()">🔄 刷新数据</button>
+            <button class="btn" onclick="compareWithReal()">📊 对比真实数据</button>
+        </div>
+        
+        <div class="comparison-table">
+            <h3>数据对比验证</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>项目</th>
+                        <th>真实数据（同花顺）</th>
+                        <th>系统数据</th>
+                        <th>状态</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>开盘价</td>
+                        <td>12.17</td>
+                        <td id="sysOpenPrice">-</td>
+                        <td id="openStatus">-</td>
+                    </tr>
+                    <tr>
+                        <td>收盘价</td>
+                        <td>11.73</td>
+                        <td id="sysClosePrice">-</td>
+                        <td id="closeStatus">-</td>
+                    </tr>
+                    <tr>
+                        <td>涨跌幅</td>
+                        <td>-3.61%</td>
+                        <td id="sysChangePercent">-</td>
+                        <td id="changeStatus">-</td>
+                    </tr>
+                    <tr>
+                        <td>价格区间</td>
+                        <td>11.73-12.17</td>
+                        <td id="sysPriceRange">-</td>
+                        <td id="rangeStatus">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="chart-container">
+            <h3>分时图表</h3>
+            <div id="chart" class="chart"></div>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            loadData();
+        });
+        
+        // 初始化图表
+        function initChart() {
+            const chartDom = document.getElementById('chart');
+            chart = echarts.init(chartDom);
+        }
+        
+        // 加载数据
+        async function loadData() {
+            try {
+                // 并行加载期权信息和分时数据
+                const [infoResponse, minuteResponse] = await Promise.all([
+                    fetch('http://localhost:9000/api/options/90005854/info'),
+                    fetch('http://localhost:9000/api/options/90005854/minute')
+                ]);
+                
+                const infoData = await infoResponse.json();
+                const minuteData = await minuteResponse.json();
+                
+                if (infoData.status === 'success' && minuteData.status === 'success') {
+                    updateStats(infoData.info, minuteData.data);
+                    renderChart(minuteData.data);
+                    compareWithReal();
+                } else {
+                    alert('数据加载失败');
+                }
+                
+            } catch (error) {
+                alert('加载失败: ' + error.message);
+            }
+        }
+        
+        // 更新统计信息
+        function updateStats(info, minuteData) {
+            const prices = minuteData.map(item => item.price);
+            const openPrice = prices[0];
+            const closePrice = prices[prices.length - 1];
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            
+            document.getElementById('optionName').textContent = info.name;
+            document.getElementById('currentPrice').textContent = info.current_price.toFixed(4);
+            
+            const changeElement = document.getElementById('changePercent');
+            changeElement.textContent = info.change_percent.toFixed(2) + '%';
+            changeElement.className = `stat-value ${info.change_percent >= 0 ? 'positive' : 'negative'}`;
+            
+            document.getElementById('openPrice').textContent = openPrice.toFixed(4);
+            document.getElementById('priceRange').textContent = `${minPrice.toFixed(4)} - ${maxPrice.toFixed(4)}`;
+            
+            // 保存数据用于对比
+            window.currentData = {
+                openPrice: openPrice,
+                closePrice: closePrice,
+                changePercent: info.change_percent,
+                priceRange: `${minPrice.toFixed(4)}-${maxPrice.toFixed(4)}`
+            };
+        }
+        
+        // 与真实数据对比
+        function compareWithReal() {
+            if (!window.currentData) return;
+            
+            const data = window.currentData;
+            
+            // 开盘价对比 (12.17)
+            document.getElementById('sysOpenPrice').textContent = data.openPrice.toFixed(4);
+            const openDiff = Math.abs(data.openPrice - 12.17);
+            document.getElementById('openStatus').textContent = openDiff < 0.05 ? '✓ 正确' : '✗ 不匹配';
+            document.getElementById('openStatus').className = openDiff < 0.05 ? 'correct' : 'incorrect';
+            
+            // 收盘价对比 (11.73)
+            document.getElementById('sysClosePrice').textContent = data.closePrice.toFixed(4);
+            const closeDiff = Math.abs(data.closePrice - 11.73);
+            document.getElementById('closeStatus').textContent = closeDiff < 0.05 ? '✓ 正确' : '✗ 不匹配';
+            document.getElementById('closeStatus').className = closeDiff < 0.05 ? 'correct' : 'incorrect';
+            
+            // 涨跌幅对比 (-3.61%)
+            document.getElementById('sysChangePercent').textContent = data.changePercent.toFixed(2) + '%';
+            const changeDiff = Math.abs(data.changePercent - (-3.61));
+            document.getElementById('changeStatus').textContent = changeDiff < 0.5 ? '✓ 正确' : '✗ 不匹配';
+            document.getElementById('changeStatus').className = changeDiff < 0.5 ? 'correct' : 'incorrect';
+            
+            // 价格区间对比
+            document.getElementById('sysPriceRange').textContent = data.priceRange;
+            const rangeMatch = data.priceRange.includes('11.73') || data.priceRange.includes('12.17');
+            document.getElementById('rangeStatus').textContent = rangeMatch ? '✓ 正确' : '✗ 不匹配';
+            document.getElementById('rangeStatus').className = rangeMatch ? 'correct' : 'incorrect';
+        }
+        
+        // 渲染图表
+        function renderChart(minuteData) {
+            const times = minuteData.map(item => item.time);
+            const prices = minuteData.map(item => item.price);
+            const volumes = minuteData.map(item => item.volume);
+            
+            const option = {
+                title: {
+                    text: `90005854 中证500ETF沽9月1850 - 真实价格版`,
+                    textStyle: { color: '#fff' },
+                    left: 'center'
+                },
+                backgroundColor: '#1a1a1a',
+                tooltip: {
+                    trigger: 'axis',
+                    backgroundColor: '#2a2a2a',
+                    borderColor: '#666',
+                    textStyle: { color: '#fff' },
+                    formatter: function(params) {
+                        const time = params[0].axisValue;
+                        const price = params[0].value;
+                        const volume = params[1] ? params[1].value : 0;
+                        return `时间: ${time}<br/>价格: ${price.toFixed(4)}<br/>成交量: ${volume}`;
+                    }
+                },
+                grid: [
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '15%',
+                        bottom: '35%'
+                    },
+                    {
+                        left: '8%',
+                        right: '8%',
+                        top: '75%',
+                        bottom: '5%'
+                    }
+                ],
+                xAxis: [
+                    {
+                        type: 'category',
+                        data: times,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    },
+                    {
+                        type: 'category',
+                        gridIndex: 1,
+                        data: times,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            interval: 30
+                        },
+                        axisTick: { show: false }
+                    }
+                ],
+                yAxis: [
+                    {
+                        type: 'value',
+                        min: 11.6,  // 显示真实价格区间
+                        max: 12.3,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { 
+                            color: '#999',
+                            formatter: (value) => value.toFixed(2)
+                        },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    },
+                    {
+                        type: 'value',
+                        gridIndex: 1,
+                        axisLine: { lineStyle: { color: '#666' } },
+                        axisLabel: { color: '#999' },
+                        splitLine: { lineStyle: { color: '#333' } }
+                    }
+                ],
+                series: [
+                    {
+                        name: '价格',
+                        type: 'line',
+                        data: prices,
+                        smooth: false,
+                        lineStyle: { color: '#1890ff', width: 2 },
+                        symbol: 'none',
+                        areaStyle: {
+                            color: {
+                                type: 'linear',
+                                x: 0, y: 0, x2: 0, y2: 1,
+                                colorStops: [
+                                    { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                                    { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                                ]
+                            }
+                        }
+                    },
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        xAxisIndex: 1,
+                        yAxisIndex: 1,
+                        data: volumes,
+                        itemStyle: { color: '#52c41a' }
+                    }
+                ]
+            };
+            
+            chart.setOption(option, true);
+            
+            console.log('✅ 图表渲染完成');
+            console.log('📊 价格统计:', {
+                开盘价: prices[0].toFixed(4),
+                收盘价: prices[prices.length - 1].toFixed(4),
+                最高价: Math.max(...prices).toFixed(4),
+                最低价: Math.min(...prices).toFixed(4),
+                变化: (((prices[prices.length - 1] - prices[0]) / prices[0]) * 100).toFixed(2) + '%'
+            });
+        }
+    </script>
+</body>
+</html>

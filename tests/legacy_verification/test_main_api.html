@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Main API Debug</title>
+</head>
+<body>
+    <h1>Main App API Test</h1>
+    <div id="result"></div>
+    
+    <script>
+        async function testMainAPI() {
+            const resultDiv = document.getElementById('result');
+            let output = '<h2>API测试结果:</h2>';
+            
+            try {
+                // Test 1: Anomaly detection
+                console.log('Testing anomaly detection...');
+                const anomalyResponse = await fetch('http://localhost:9000/api/anomaly/detect-legacy?scan_all=true');
+                if (anomalyResponse.ok) {
+                    const anomalyData = await anomalyResponse.json();
+                    output += `<p style="color: green;">✅ 异动检测API: 成功, 发现 ${anomalyData.anomalies?.length || 0} 个异动</p>`;
+                } else {
+                    output += `<p style="color: red;">❌ 异动检测API: 失败 ${anomalyResponse.status}</p>`;
+                }
+                
+                // Test 2: Config
+                console.log('Testing config...');
+                const configResponse = await fetch('http://localhost:9000/api/config');
+                if (configResponse.ok) {
+                    const configData = await configResponse.json();
+                    const favoriteStocks = configData?.user_customization?.自定义监控?.自选股票池 || [];
+                    output += `<p style="color: green;">✅ 配置API: 成功, 自选股 ${favoriteStocks.length} 只</p>`;
+                    
+                    // Test 3: Stock data for each favorite
+                    for (const stockCode of favoriteStocks) {
+                        try {
+                            const stockResponse = await fetch(`http://localhost:9000/api/stocks/${stockCode}/realtime`);
+                            if (stockResponse.ok) {
+                                const stockData = await stockResponse.json();
+                                output += `<p style="color: green;">✅ 股票${stockCode}: ${stockData.data?.name || '未知'}</p>`;
+                            } else {
+                                output += `<p style="color: orange;">⚠️ 股票${stockCode}: API错误 ${stockResponse.status}</p>`;
+                            }
+                        } catch (error) {
+                            output += `<p style="color: red;">❌ 股票${stockCode}: ${error.message}</p>`;
+                        }
+                    }
+                } else {
+                    output += `<p style="color: red;">❌ 配置API: 失败 ${configResponse.status}</p>`;
+                }
+                
+            } catch (error) {
+                output += `<p style="color: red;">❌ 总体错误: ${error.message}</p>`;
+            }
+            
+            resultDiv.innerHTML = output;
+        }
+        
+        testMainAPI();
+    </script>
+</body>
+</html>

@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>东风破优化功能测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .feature-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+        }
+        .feature-title::before {
+            content: "✅";
+            margin-right: 8px;
+        }
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .test-button:hover {
+            background: #2980b9;
+        }
+        .result-area {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 10px;
+            margin-top: 10px;
+            min-height: 100px;
+            overflow-y: auto;
+            max-height: 300px;
+            font-family: Monaco, 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .loading {
+            color: #ffa500;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .data-table th,
+        .data-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 12px;
+        }
+        .data-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .status-bar {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 东风破优化功能测试面板</h1>
+        
+        <div class="status-bar">
+            <div id="status">系统状态: <span id="system-status">检查中...</span></div>
+        </div>
+
+        <div class="feature-grid">
+            <!-- 市场扫描器 -->
+            <div class="feature-card">
+                <div class="feature-title">全市场股票扫描器</div>
+                <button class="test-button" onclick="testMarketScanner('top-gainers', 5)">涨幅榜 TOP5</button>
+                <button class="test-button" onclick="testMarketScanner('top-losers', 5)">跌幅榜 TOP5</button>
+                <button class="test-button" onclick="testMarketScanner('top-volume', 5)">成交量榜 TOP5</button>
+                <button class="test-button" onclick="testMarketScanner('limit-up', 5)">涨停板</button>
+                <button class="test-button" onclick="testMarketScanner('volume-surge', 5)">放量异动</button>
+                <div class="result-area" id="scanner-result">点击按钮测试市场扫描功能...</div>
+            </div>
+
+            <!-- 实时排行榜 -->
+            <div class="feature-card">
+                <div class="feature-title">实时排行榜系统</div>
+                <button class="test-button" onclick="testRankings('gainers', 5)">涨幅排行榜</button>
+                <button class="test-button" onclick="testRankings('volume', 5)">成交量排行榜</button>
+                <button class="test-button" onclick="testRankings('turnover', 5)">换手率排行榜</button>
+                <button class="test-button" onclick="testRankings('amplitude', 5)">振幅排行榜</button>
+                <button class="test-button" onclick="getRankingTypes()">获取排行类型</button>
+                <div class="result-area" id="rankings-result">点击按钮测试排行榜功能...</div>
+            </div>
+
+            <!-- 智能选股 -->
+            <div class="feature-card">
+                <div class="feature-title">智能选股系统</div>
+                <button class="test-button" onclick="testSmartSelection('composite', 5)">综合策略</button>
+                <button class="test-button" onclick="testSmartSelection('volume_breakout', 5)">放量突破</button>
+                <button class="test-button" onclick="testSmartSelection('strong_momentum', 5)">强势动量</button>
+                <button class="test-button" onclick="testSmartSelection('oversold_rebound', 5)">超跌反弹</button>
+                <button class="test-button" onclick="testSmartSelection('steady_growth', 5)">稳健增长</button>
+                <div class="result-area" id="selection-result">点击按钮测试智能选股功能...</div>
+            </div>
+
+            <!-- 股票池管理 -->
+            <div class="feature-card">
+                <div class="feature-title">动态股票池管理</div>
+                <button class="test-button" onclick="testStockPool('all')">获取所有股票</button>
+                <button class="test-button" onclick="testStockPool('active')">活跃股票池</button>
+                <button class="test-button" onclick="testStockPool('hot')">热门股票</button>
+                <button class="test-button" onclick="getPoolStats()">池统计信息</button>
+                <button class="test-button" onclick="refreshPool()">刷新股票池</button>
+                <div class="result-area" id="pool-result">点击按钮测试股票池管理功能...</div>
+            </div>
+
+            <!-- 板块轮动检测 -->
+            <div class="feature-card">
+                <div class="feature-title">板块轮动检测</div>
+                <button class="test-button" onclick="testSectorRotation()">获取轮动分析</button>
+                <button class="test-button" onclick="testRotationSignals()">获取轮动信号</button>
+                <button class="test-button" onclick="testSectorAnalysis()">板块分析</button>
+                <div class="result-area" id="rotation-result">点击按钮测试板块轮动功能...</div>
+            </div>
+
+            <!-- 智能预警系统 -->
+            <div class="feature-card">
+                <div class="feature-title">智能预警系统</div>
+                <button class="test-button" onclick="testAlerts()">获取当前预警</button>
+                <button class="test-button" onclick="scanAlerts()">扫描生成预警</button>
+                <button class="test-button" onclick="testWatchlist('add', ['000001', '600519'])">添加自选股</button>
+                <button class="test-button" onclick="testWatchlist('remove', ['000001'])">移除自选股</button>
+                <div class="result-area" id="alerts-result">点击按钮测试智能预警功能...</div>
+            </div>
+
+            <!-- 市场概况 -->
+            <div class="feature-card">
+                <div class="feature-title">市场概况分析</div>
+                <button class="test-button" onclick="testMarketSummary()">市场概况</button>
+                <button class="test-button" onclick="testSectorAnalysis()">板块分析</button>
+                <button class="test-button" onclick="testActiveStocks()">活跃股票</button>
+                <div class="result-area" id="market-result">点击按钮测试市场概况功能...</div>
+            </div>
+
+            <!-- 系统健康检查 -->
+            <div class="feature-card">
+                <div class="feature-title">系统监控</div>
+                <button class="test-button" onclick="healthCheck()">系统健康检查</button>
+                <button class="test-button" onclick="testAllEndpoints()">全功能测试</button>
+                <div class="result-area" id="health-result">点击按钮测试系统状态...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:9000/api';
+        
+        // 检查系统状态
+        async function checkSystemStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/health`);
+                const data = await response.json();
+                document.getElementById('system-status').innerHTML = 
+                    `<span style="color: #2ecc71;">✅ ${data.status}</span> | 交易时间: ${data.trading_hours ? '是' : '否'}`;
+            } catch (error) {
+                document.getElementById('system-status').innerHTML = 
+                    `<span style="color: #e74c3c;">❌ 连接失败</span>`;
+            }
+        }
+
+        // 市场扫描器测试
+        async function testMarketScanner(type, limit) {
+            const resultArea = document.getElementById('scanner-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 扫描中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/${type}?limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.stocks.length > 0) {
+                    let html = `<div class="success">✅ 扫描完成，找到 ${data.count} 只股票</div>`;
+                    html += '<table class="data-table"><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅%</th><th>成交量</th><th>换手率%</th></tr>';
+                    
+                    data.stocks.slice(0, 5).forEach(stock => {
+                        const changeColor = stock.change_percent >= 0 ? '#e74c3c' : '#27ae60';
+                        html += `<tr>
+                            <td>${stock.code}</td>
+                            <td>${stock.name}</td>
+                            <td>${stock.price.toFixed(2)}</td>
+                            <td style="color:${changeColor}">${stock.change_percent.toFixed(2)}%</td>
+                            <td>${(stock.volume/10000).toFixed(0)}万</td>
+                            <td>${stock.turnover_rate.toFixed(2)}%</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 没有找到数据</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 排行榜测试
+        async function testRankings(type, limit) {
+            const resultArea = document.getElementById('rankings-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/rankings/${type}?limit=${limit}`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.stocks.length > 0) {
+                    let html = `<div class="success">✅ 获取成功，共 ${data.count} 只股票</div>`;
+                    html += '<table class="data-table"><tr><th>排名</th><th>代码</th><th>名称</th><th>价格</th><th>涨幅%</th><th>排名值</th></tr>';
+                    
+                    data.stocks.slice(0, 5).forEach(stock => {
+                        const changeColor = stock.change_percent >= 0 ? '#e74c3c' : '#27ae60';
+                        html += `<tr>
+                            <td>${stock.ranking}</td>
+                            <td>${stock.code}</td>
+                            <td>${stock.name}</td>
+                            <td>${stock.price.toFixed(2)}</td>
+                            <td style="color:${changeColor}">${stock.change_percent.toFixed(2)}%</td>
+                            <td>${stock.ranking_value.toFixed(2)}</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 没有找到排行榜数据</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 获取排行榜类型
+        async function getRankingTypes() {
+            const resultArea = document.getElementById('rankings-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/ranking-types`);
+                const data = await response.json();
+                
+                let html = '<div class="success">✅ 支持的排行榜类型:</div>';
+                data.ranking_types.forEach(type => {
+                    html += `<div style="margin: 5px 0; padding: 5px; background: #f8f9fa; border-radius: 3px;">
+                        ${type.icon} <strong>${type.name}</strong> (${type.value}): ${type.description}
+                    </div>`;
+                });
+                resultArea.innerHTML = html;
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 智能选股测试
+        async function testSmartSelection(strategy, limit) {
+            const resultArea = document.getElementById('selection-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 选股中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/smart-selection/realtime-select?strategy=${strategy}&top_n=${limit}`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.signals && data.signals.length > 0) {
+                    let html = `<div class="success">✅ 选股完成，共 ${data.signals.length} 只股票</div>`;
+                    html += '<table class="data-table"><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅%</th><th>评分</th><th>理由</th></tr>';
+                    
+                    data.signals.slice(0, 5).forEach(signal => {
+                        const changeColor = signal.change_percent >= 0 ? '#e74c3c' : '#27ae60';
+                        html += `<tr>
+                            <td>${signal.code}</td>
+                            <td>${signal.name}</td>
+                            <td>${signal.price ? signal.price.toFixed(2) : 'N/A'}</td>
+                            <td style="color:${changeColor}">${signal.change_percent ? signal.change_percent.toFixed(2) : '0.00'}%</td>
+                            <td>${signal.score ? signal.score.toFixed(1) : 'N/A'}</td>
+                            <td>${signal.reason || signal.signals ? signal.signals.join(', ') : '无'}</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 没有找到符合条件的股票</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 股票池测试
+        async function testStockPool(category) {
+            const resultArea = document.getElementById('pool-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取中...</span>';
+            
+            try {
+                let url;
+                if (category === 'hot') {
+                    url = `${API_BASE}/stock-pool/hot?limit=10`;
+                } else {
+                    url = `${API_BASE}/stock-pool/stocks/${category}`;
+                }
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const stocks = data.stocks || data.hot_stocks || [];
+                    let html = `<div class="success">✅ 获取成功，共 ${data.count || stocks.length} 只股票</div>`;
+                    html += `<div style="margin: 10px 0;">类别: ${data.category || category}</div>`;
+                    html += '<div style="max-height: 150px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 5px;">';
+                    stocks.slice(0, 20).forEach((stock, index) => {
+                        html += `<span style="display: inline-block; margin: 2px; padding: 3px 6px; background: #e3f2fd; border-radius: 3px; font-size: 12px;">${stock}</span>`;
+                    });
+                    html += '</div>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 没有找到股票池数据</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 获取池统计
+        async function getPoolStats() {
+            const resultArea = document.getElementById('pool-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 统计中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/stock-pool/stats`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let html = '<div class="success">✅ 统计信息获取成功</div>';
+                    html += '<table class="data-table"><tr><th>类别</th><th>股票数量</th></tr>';
+                    
+                    Object.entries(data.stats).forEach(([category, count]) => {
+                        const categoryNames = {
+                            'all': '所有股票',
+                            'watchlist': '自选股',
+                            'active': '活跃股',
+                            'bluechip': '蓝筹股',
+                            'tech': '科技股',
+                            'energy': '新能源',
+                            'medical': '医药股',
+                            'consumer': '消费股',
+                            'finance': '金融股'
+                        };
+                        html += `<tr><td>${categoryNames[category] || category}</td><td>${count}</td></tr>`;
+                    });
+                    html += '</table>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 获取统计信息失败</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 刷新股票池
+        async function refreshPool() {
+            const resultArea = document.getElementById('pool-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 刷新中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/stock-pool/refresh`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultArea.innerHTML = `<div class="success">✅ ${data.message}，共 ${data.count} 只股票</div>`;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 刷新失败</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 板块轮动测试
+        async function testSectorRotation() {
+            const resultArea = document.getElementById('rotation-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 分析中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/sector-rotation`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.data) {
+                    let html = '<div class="success">✅ 板块轮动分析完成</div>';
+                    
+                    if (data.data.sector_analysis && data.data.sector_analysis.summary) {
+                        const summary = data.data.sector_analysis.summary;
+                        html += `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                            <strong>市场概况:</strong> ${summary.total_sectors || 0} 个板块，
+                            平均涨幅: ${summary.avg_change_percent ? summary.avg_change_percent.toFixed(2) : '0.00'}%，
+                            市场情绪: ${summary.market_sentiment === 'bullish' ? '🐂 乐观' : '🐻 悲观'}
+                        </div>`;
+                    }
+                    
+                    if (data.data.rotation_signals && data.data.rotation_signals.length > 0) {
+                        html += '<div><strong>轮动信号:</strong></div>';
+                        data.data.rotation_signals.forEach(signal => {
+                            html += `<div style="margin: 5px 0; padding: 8px; background: #fff3cd; border-radius: 3px; font-size: 14px;">
+                                ${signal.from_sector} → ${signal.to_sector} (${signal.rotation_type})
+                                <br>强度: ${signal.strength.toFixed(1)}，置信度: ${signal.confidence.toFixed(2)}
+                                <br>理由: ${signal.reason}
+                            </div>`;
+                        });
+                    } else {
+                        html += '<div style="color: #6c757d;">暂无明显轮动信号</div>';
+                    }
+                    
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 板块分析数据为空</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 轮动信号测试
+        async function testRotationSignals() {
+            const resultArea = document.getElementById('rotation-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取信号中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/sector-rotation/signals`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let html = `<div class="success">✅ 获取到 ${data.count} 个轮动信号</div>`;
+                    
+                    if (data.signals.length > 0) {
+                        data.signals.forEach(signal => {
+                            html += `<div style="margin: 10px 0; padding: 10px; background: #d4edda; border-radius: 5px;">
+                                <strong>${signal.from_sector} → ${signal.to_sector}</strong>
+                                <br>类型: ${signal.rotation_type}
+                                <br>强度: ${signal.strength.toFixed(1)}，置信度: ${(signal.confidence * 100).toFixed(1)}%
+                                <br>理由: ${signal.reason}
+                                <br>预期持续: ${signal.expected_duration || '未知'}
+                            </div>`;
+                        });
+                    } else {
+                        html += '<div style="color: #6c757d;">暂无轮动信号</div>';
+                    }
+                    
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 获取轮动信号失败</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 智能预警测试
+        async function testAlerts() {
+            const resultArea = document.getElementById('alerts-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取预警中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/alerts`);
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let html = `<div class="success">✅ 当前活跃预警: ${data.count} 个</div>`;
+                    
+                    if (data.alerts.length > 0) {
+                        data.alerts.forEach(alert => {
+                            const levelColors = {
+                                'critical': '#dc3545',
+                                'high': '#fd7e14',
+                                'medium': '#ffc107',
+                                'low': '#28a745'
+                            };
+                            const levelNames = {
+                                'critical': '🚨 紧急',
+                                'high': '⚠️ 高',
+                                'medium': '📝 中',
+                                'low': '💡 低'
+                            };
+                            
+                            html += `<div style="margin: 10px 0; padding: 10px; border-left: 4px solid ${levelColors[alert.level]}; background: #f8f9fa;">
+                                <div style="font-weight: bold;">${alert.title}</div>
+                                <div style="color: ${levelColors[alert.level]};">${levelNames[alert.level]} | ${alert.stock_code} ${alert.stock_name}</div>
+                                <div style="margin: 5px 0;">${alert.message}</div>
+                                <div style="font-size: 12px; color: #6c757d;">触发时间: ${new Date(alert.triggered_at).toLocaleString()}</div>
+                            </div>`;
+                        });
+                    } else {
+                        html += '<div style="color: #6c757d;">暂无活跃预警</div>';
+                    }
+                    
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 获取预警失败</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 扫描预警
+        async function scanAlerts() {
+            const resultArea = document.getElementById('alerts-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 扫描预警中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/alerts/scan`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    let html = `<div class="success">✅ ${data.message}</div>`;
+                    
+                    if (data.new_alerts.length > 0) {
+                        html += '<div><strong>新预警:</strong></div>';
+                        data.new_alerts.forEach(alert => {
+                            html += `<div style="margin: 5px 0; padding: 8px; background: #fff3cd; border-radius: 3px;">
+                                ${alert.title}: ${alert.message}
+                            </div>`;
+                        });
+                    } else {
+                        html += '<div style="color: #6c757d;">未发现新预警</div>';
+                    }
+                    
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 扫描预警失败</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 管理自选股
+        async function testWatchlist(action, stocks) {
+            const resultArea = document.getElementById('alerts-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 处理中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/alerts/watchlist?action=${action}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, stock_codes: stocks })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    resultArea.innerHTML = `<div class="success">✅ ${data.message}，自选股池大小: ${data.watchlist_size}</div>`;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 操作失败</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 市场概况测试
+        async function testMarketSummary() {
+            const resultArea = document.getElementById('market-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取概况中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/market-summary`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.summary) {
+                    const summary = data.summary;
+                    let html = '<div class="success">✅ 市场概况获取成功</div>';
+                    
+                    html += `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                        <div><strong>市场情绪:</strong> ${summary.market_sentiment === 'bullish' ? '🐂 乐观' : '🐻 悲观'}</div>
+                        <div><strong>上涨家数:</strong> ${summary.gainers_count || 0}</div>
+                        <div><strong>下跌家数:</strong> ${summary.losers_count || 0}</div>
+                        <div><strong>涨停家数:</strong> ${summary.limit_up_count || 0}</div>
+                    `;
+                    
+                    if (summary.top_gainer) {
+                        html += `<div><strong>领涨股:</strong> ${summary.top_gainer.name} (${summary.top_gainer.code}) +${summary.top_gainer.change_percent.toFixed(2)}%</div>`;
+                    }
+                    
+                    if (summary.most_active) {
+                        html += `<div><strong>最活跃:</strong> ${summary.most_active.name} (${summary.most_active.code}) 成交${(summary.most_active.amount/100000000).toFixed(1)}亿</div>`;
+                    }
+                    
+                    html += '</div>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 市场概况数据为空</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 板块分析
+        async function testSectorAnalysis() {
+            const resultArea = document.getElementById('market-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 分析板块中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/sector-analysis`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.analysis) {
+                    let html = '<div class="success">✅ 板块分析完成</div>';
+                    
+                    if (data.analysis.hot_sectors && data.analysis.hot_sectors.length > 0) {
+                        html += '<div style="margin: 10px 0;"><strong>热门板块:</strong></div>';
+                        data.analysis.hot_sectors.forEach(sector => {
+                            html += `<div style="margin: 5px 0; padding: 5px; background: #d4edda; border-radius: 3px;">
+                                ${sector.name}: +${sector.change_percent.toFixed(2)}%
+                            </div>`;
+                        });
+                    }
+                    
+                    if (data.analysis.cold_sectors && data.analysis.cold_sectors.length > 0) {
+                        html += '<div style="margin: 10px 0;"><strong>冷门板块:</strong></div>';
+                        data.analysis.cold_sectors.forEach(sector => {
+                            html += `<div style="margin: 5px 0; padding: 5px; background: #f8d7da; border-radius: 3px;">
+                                ${sector.name}: ${sector.change_percent.toFixed(2)}%
+                            </div>`;
+                        });
+                    }
+                    
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 板块分析数据为空</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 活跃股票
+        async function testActiveStocks() {
+            const resultArea = document.getElementById('market-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 获取活跃股票中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/active-stocks?limit=10`);
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.stocks.length > 0) {
+                    let html = `<div class="success">✅ 获取到 ${data.count} 只活跃股票</div>`;
+                    html += '<table class="data-table"><tr><th>代码</th><th>名称</th><th>价格</th><th>涨幅%</th><th>换手率%</th></tr>';
+                    
+                    data.stocks.slice(0, 10).forEach(stock => {
+                        const changeColor = stock.change_percent >= 0 ? '#e74c3c' : '#27ae60';
+                        html += `<tr>
+                            <td>${stock.code}</td>
+                            <td>${stock.name}</td>
+                            <td>${stock.price.toFixed(2)}</td>
+                            <td style="color:${changeColor}">${stock.change_percent.toFixed(2)}%</td>
+                            <td>${stock.turnover_rate.toFixed(2)}%</td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                    resultArea.innerHTML = html;
+                } else {
+                    resultArea.innerHTML = '<div class="error">❌ 没有找到活跃股票数据</div>';
+                }
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 请求失败: ${error.message}</div>`;
+            }
+        }
+
+        // 健康检查
+        async function healthCheck() {
+            const resultArea = document.getElementById('health-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 检查中...</span>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/market-scanner/health`);
+                const data = await response.json();
+                
+                let html = `<div class="success">✅ 系统状态: ${data.status}</div>`;
+                html += `<div style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 5px;">
+                    <div><strong>服务:</strong> ${data.service}</div>
+                    <div><strong>交易时间:</strong> ${data.trading_hours ? '是' : '否'}</div>
+                    <div><strong>时间戳:</strong> ${new Date(data.timestamp).toLocaleString()}</div>
+                </div>`;
+                
+                resultArea.innerHTML = html;
+            } catch (error) {
+                resultArea.innerHTML = `<div class="error">❌ 健康检查失败: ${error.message}</div>`;
+            }
+        }
+
+        // 全功能测试
+        async function testAllEndpoints() {
+            const resultArea = document.getElementById('health-result');
+            resultArea.innerHTML = '<span class="loading">⏳ 全面测试中...</span>';
+            
+            const endpoints = [
+                { name: '市场扫描器', url: `${API_BASE}/market-scanner/health` },
+                { name: '涨幅榜', url: `${API_BASE}/market-scanner/top-gainers?limit=3` },
+                { name: '排行榜', url: `${API_BASE}/market-scanner/rankings/gainers?limit=3` },
+                { name: '智能选股', url: `${API_BASE}/smart-selection/realtime-select?strategy=composite&top_n=3` },
+                { name: '股票池', url: `${API_BASE}/stock-pool/hot?limit=5` },
+                { name: '板块轮动', url: `${API_BASE}/market-scanner/sector-rotation/signals` },
+                { name: '智能预警', url: `${API_BASE}/market-scanner/alerts` },
+                { name: '市场概况', url: `${API_BASE}/market-scanner/market-summary` }
+            ];
+            
+            let results = [];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(endpoint.url);
+                    const data = await response.json();
+                    results.push({
+                        name: endpoint.name,
+                        status: response.ok ? '✅' : '❌',
+                        message: data.status || '未知状态'
+                    });
+                } catch (error) {
+                    results.push({
+                        name: endpoint.name,
+                        status: '❌',
+                        message: '连接失败'
+                    });
+                }
+            }
+            
+            let html = '<div class="success">🎯 全功能测试完成</div>';
+            html += '<table class="data-table"><tr><th>功能模块</th><th>状态</th><th>结果</th></tr>';
+            
+            results.forEach(result => {
+                html += `<tr>
+                    <td>${result.name}</td>
+                    <td>${result.status}</td>
+                    <td>${result.message}</td>
+                </tr>`;
+            });
+            html += '</table>';
+            
+            const successCount = results.filter(r => r.status === '✅').length;
+            html += `<div style="margin: 10px 0; font-weight: bold;">测试结果: ${successCount}/${results.length} 个模块正常运行</div>`;
+            
+            resultArea.innerHTML = html;
+        }
+
+        // 页面加载时检查系统状态
+        window.onload = function() {
+            checkSystemStatus();
+            // 每30秒更新一次系统状态
+            setInterval(checkSystemStatus, 30000);
+        };
+    </script>
+</body>
+</html>

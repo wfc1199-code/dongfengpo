@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Y轴范围测试</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+        .test-case { margin: 20px 0; padding: 15px; border: 1px solid #333; }
+        .stock-info { color: #4CAF50; }
+        .calculation { color: #FF9800; margin-left: 20px; }
+        .result { color: #2196F3; margin-left: 40px; }
+        .error { color: #f44336; }
+        .success { color: #4CAF50; }
+    </style>
+</head>
+<body>
+    <h1>分时图Y轴范围测试</h1>
+    <div id="results"></div>
+
+    <script>
+        function testYAxisRange(stockCode, yesterdayClose, currentPrice) {
+            const result = document.createElement('div');
+            result.className = 'test-case';
+            
+            // 判断涨跌停板限制
+            let limitPercent = 0.1; // 默认主板10%
+            let boardType = '主板';
+            
+            if (stockCode.startsWith('688') || stockCode.startsWith('sz688') || stockCode.startsWith('sh688')) {
+                limitPercent = 0.2;
+                boardType = '科创板';
+            } else if (stockCode.startsWith('300') || stockCode.startsWith('sz300') || stockCode.startsWith('sh300')) {
+                limitPercent = 0.2;
+                boardType = '创业板';
+            } else if (stockCode.startsWith('hk')) {
+                limitPercent = 1.0;
+                boardType = '港股';
+            }
+            
+            // 计算Y轴范围
+            const yAxisMax = yesterdayClose * (1 + limitPercent);
+            const yAxisMin = yesterdayClose * (1 - limitPercent);
+            
+            // 检查当前价格是否在范围内
+            const inRange = currentPrice >= yAxisMin && currentPrice <= yAxisMax;
+            
+            // 计算涨跌幅
+            const changePercent = ((currentPrice - yesterdayClose) / yesterdayClose * 100);
+            
+            result.innerHTML = `
+                <div class="stock-info">📊 股票代码: ${stockCode} (${boardType}, 涨跌幅限制: ${limitPercent * 100}%)</div>
+                <div class="calculation">
+                    昨收价: ${yesterdayClose.toFixed(2)}<br>
+                    当前价: ${currentPrice.toFixed(2)} (${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%)
+                </div>
+                <div class="result">
+                    Y轴最大值: ${yAxisMax.toFixed(2)} (涨停价)<br>
+                    Y轴最小值: ${yAxisMin.toFixed(2)} (跌停价)<br>
+                    <span class="${inRange ? 'success' : 'error'}">
+                        ✓ 当前价格${inRange ? '在' : '超出'}Y轴范围
+                    </span>
+                </div>
+            `;
+            
+            return result;
+        }
+        
+        // 测试用例
+        const testCases = [
+            { code: '002864', yesterday: 32.50, current: 32.96, name: '盘龙药业' },
+            { code: '688291', yesterday: 29.03, current: 34.84, name: '金橙子' },
+            { code: '001229', yesterday: 40.69, current: 42.85, name: '魅视科技' },
+            { code: '300750', yesterday: 100.00, current: 110.00, name: '宁德时代(假设)' },
+            { code: '600519', yesterday: 1500.00, current: 1520.00, name: '贵州茅台(假设)' },
+        ];
+        
+        const resultsDiv = document.getElementById('results');
+        testCases.forEach(test => {
+            resultsDiv.appendChild(testYAxisRange(test.code, test.yesterday, test.current));
+        });
+        
+        // 添加说明
+        const explanation = document.createElement('div');
+        explanation.style.marginTop = '30px';
+        explanation.style.padding = '20px';
+        explanation.style.background = '#2a2a2a';
+        explanation.style.borderRadius = '5px';
+        explanation.innerHTML = `
+            <h2>📝 涨跌停板规则说明</h2>
+            <ul>
+                <li><strong>主板</strong>（600/601/603/000/002开头）: ±10%</li>
+                <li><strong>科创板</strong>（688开头）: ±20%</li>
+                <li><strong>创业板</strong>（300开头）: ±20%</li>
+                <li><strong>港股</strong>（hk开头）: 无涨跌停限制</li>
+            </ul>
+            <h3>⚠️ 分时图Y轴范围计算</h3>
+            <p>Y轴范围应该严格按照涨跌停板限制设置：</p>
+            <ul>
+                <li>最大值 = 昨收价 × (1 + 涨跌幅限制)</li>
+                <li>最小值 = 昨收价 × (1 - 涨跌幅限制)</li>
+            </ul>
+            <p><strong>0轴</strong>（昨收价线）应该始终在Y轴的正中间位置！</p>
+        `;
+        resultsDiv.appendChild(explanation);
+    </script>
+</body>
+</html>

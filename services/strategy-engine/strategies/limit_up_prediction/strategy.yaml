@@ -1,0 +1,64 @@
+name: limit_up_prediction
+version: 2.0.0
+description: 涨停板预测策略 - 基于多维度特征的涨停潜力分析
+
+dependencies:
+  - price_change_rate
+  - volume_ratio
+  - momentum
+  - pattern_recognition
+
+parameters:
+  # 涨幅参数
+  min_change_percent: 2.0        # 最小涨幅要求(%)
+  strong_change_ratio: 0.4       # 强势拉升阈值(相对涨停板)
+  near_limit_ratio: 0.8          # 接近涨停阈值
+
+  # 成交量参数
+  volume_surge_ratio: 1.5        # 温和放量倍数
+  strong_volume_ratio: 2.0       # 明显放量倍数
+  huge_volume_ratio: 3.0         # 巨量突破倍数
+
+  # 动量参数
+  momentum_threshold: 0.5        # 动量阈值(每分钟涨幅%)
+  acceleration_threshold: 0.2    # 加速度阈值
+
+  # 涨停板限制
+  main_board_limit: 9.8          # 主板/中小板涨停(%)
+  growth_board_limit: 19.8       # 创业板/科创板涨停(%)
+
+  # 置信度参数
+  min_signal_count: 2            # 最小信号数量
+  min_probability: 0.5           # 最小概率阈值
+
+  # 时间分层窗口
+  time_windows:
+    - name: "early_morning"
+      start: "09:30"
+      end: "10:00"
+      weight: 0.7               # 早盘强势权重
+    - name: "mid_morning"
+      start: "10:00"
+      end: "11:30"
+      weight: 0.6               # 盘中活跃权重
+    - name: "afternoon"
+      start: "13:00"
+      end: "14:30"
+      weight: 0.5               # 午后权重
+    - name: "late_session"
+      start: "14:30"
+      end: "15:00"
+      weight: 0.4               # 尾盘异动权重
+
+risk_controls:
+  min_confidence: 0.50           # 最小置信度
+  blacklist_sectors:
+    - "ST"
+    - "退市"
+    - "*ST"
+  max_distance_to_limit: 8.0    # 距离涨停板最大距离(%)
+
+output:
+  signal_type: "limit_up_potential"
+  include_time_window: true
+  include_distance_to_limit: true
