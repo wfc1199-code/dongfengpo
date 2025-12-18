@@ -1,0 +1,99 @@
+{
+  "timestamp": "2025-12-17T23:28:11.114705",
+  "strategy": "AmbushStrategy",
+  "best_parameters": {
+    "lookback_days": 20,
+    "min_confidence": 0.55,
+    "volume_ratio_min": 1.2,
+    "volume_ratio_max": 4.0,
+    "max_intraday_range": 0.05,
+    "washout_days": 3,
+    "min_washout_pct": 0.03,
+    "max_washout_pct": 0.12,
+    "_train_sharpe": 1.2453134908003007
+  },
+  "best_performance": {
+    "total_return": 1.5084801003200001,
+    "sharpe_ratio": 2.466614869233358,
+    "max_drawdown": 0.22335836112527915,
+    "win_rate": 0.6,
+    "total_trades": 10
+  },
+  "top_5": [
+    {
+      "parameters": {
+        "lookback_days": 20,
+        "min_confidence": 0.55,
+        "volume_ratio_min": 1.2,
+        "volume_ratio_max": 4.0,
+        "max_intraday_range": 0.05,
+        "washout_days": 3,
+        "min_washout_pct": 0.03,
+        "max_washout_pct": 0.12,
+        "_train_sharpe": 1.2453134908003007
+      },
+      "sharpe": 2.466614869233358,
+      "return": 1.5084801003200001
+    },
+    {
+      "parameters": {
+        "lookback_days": 20,
+        "min_confidence": 0.55,
+        "volume_ratio_min": 1.2,
+        "volume_ratio_max": 4.0,
+        "max_intraday_range": 0.06,
+        "washout_days": 3,
+        "min_washout_pct": 0.03,
+        "max_washout_pct": 0.12,
+        "_train_sharpe": 0.8020847970695608
+      },
+      "sharpe": 2.466614869233358,
+      "return": 1.5084801003200001
+    },
+    {
+      "parameters": {
+        "lookback_days": 20,
+        "min_confidence": 0.55,
+        "volume_ratio_min": 1.2,
+        "volume_ratio_max": 5.0,
+        "max_intraday_range": 0.05,
+        "washout_days": 3,
+        "min_washout_pct": 0.03,
+        "max_washout_pct": 0.12,
+        "_train_sharpe": 1.2453134908003007
+      },
+      "sharpe": 2.466614869233358,
+      "return": 1.5084801003200001
+    },
+    {
+      "parameters": {
+        "lookback_days": 20,
+        "min_confidence": 0.55,
+        "volume_ratio_min": 1.2,
+        "volume_ratio_max": 5.0,
+        "max_intraday_range": 0.06,
+        "washout_days": 3,
+        "min_washout_pct": 0.03,
+        "max_washout_pct": 0.12,
+        "_train_sharpe": 0.8020847970695608
+      },
+      "sharpe": 2.466614869233358,
+      "return": 1.5084801003200001
+    },
+    {
+      "parameters": {
+        "lookback_days": 30,
+        "min_confidence": 0.55,
+        "volume_ratio_min": 1.2,
+        "volume_ratio_max": 4.0,
+        "max_intraday_range": 0.05,
+        "washout_days": 3,
+        "min_washout_pct": 0.03,
+        "max_washout_pct": 0.12,
+        "_train_sharpe": 1.2682333199657978
+      },
+      "sharpe": 2.350811709367094,
+      "return": 1.1803504664130002
+    }
+  ]
+}
