@@ -1,0 +1,24 @@
+# Backtest Engine 依赖
+
+# FastAPI框架
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+pydantic==2.5.3
+pydantic-settings==2.1.0
+
+# 数据处理
+pandas==2.1.4
+numpy==1.26.3
+
+# 回测相关（后续添加具体实现时需要）
+# scipy==1.11.4
+# scikit-learn==1.4.0
+
+# 测试
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.26.0  # 用于测试API
+
+# 代码质量
+black==23.12.1
+ruff==0.1.11
