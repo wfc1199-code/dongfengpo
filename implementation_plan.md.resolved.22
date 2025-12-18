@@ -1,0 +1,398 @@
+# 架构方案：AI量化分析平台 - v20 完整版
+
+## 1. 架构演进对比 (Architecture Evolution)
+
+### 1.1 现有架构 (Current / Legacy)
+目前的架构是简单的"直连查询"模式，无状态、无风控、无回测。
+
+```mermaid
+graph LR
+    subgraph Frontend [东风破前端]
+        LegacyP["盯盘雷达页面"]
+    end
+
+    subgraph Backend [Signal API 服务]
+        Router["limit_up.py"]
+    end
+
+    subgraph Data [数据源]
+        AkShare["AkShare API"]
+    end
+
+    LegacyP -->|HTTP| Router
+    Router -->|Direct Call| AkShare
+    AkShare -->|JSON| Router
+    Router -->|JSON| LegacyP
+```
+
+### 1.2 集成后架构 (Integrated / Target)
+采用 **"旁路挂载 (Sidecar)"** 模式。新旧系统平行运行。
+
+```mermaid
+graph TD
+    subgraph Frontend [前端 Dashboard]
+        LegacyP[旧: 盯盘雷达]
+        QuantP["新: AI 量化实验室"]
+    end
+
+    subgraph Backend [Signal API 服务]
+        subgraph LegacyModule [Legacy Module]
+            OldRouter[limit_up.py]
+        end
+        
+        subgraph QuantModule [Quant Module]
+            NewRouter[quant.py]
+            RT["Realtime Engine"]
+            BT["Backtest Engine"]
+            Risk["Risk Manager"]
+            DataLayer["Data Layer"]
+        end
+    end
+
+    subgraph Storage [本地数据湖]
+        DuckDB[("DuckDB + Parquet")]
+        MetaDB[("SQLite")]
+    end
+
+    subgraph External [外部数据源]
+        Tushare["Tushare Pro"]
+        AkShare["AkShare"]
+        DeepSeek["DeepSeek AI"]
+    end
+
+    LegacyP --> OldRouter --> AkShare
+    QuantP --> NewRouter --> RT & BT
+    RT --> Risk --> AkShare & DeepSeek
+    BT --> DuckDB
+    Tushare -->|每日增量| DataLayer --> DuckDB
+```
+
+---
+
+## 2. 核心数据流图 (Core Data Flow)
+
+### 2.1 潜伏策略工作流 (Ambush Workflow)
+
+```mermaid
+sequenceDiagram
+    participant Cron as 定时任务
+    participant TS as Tushare Client
+    participant Duck as DuckDB
+    participant Quant as Quant Engine
+    participant AI as DeepSeek Agent
+    participant DB as SQLite
+
+    Cron->>TS: 1. 下载分钟线 & 资金流
+    TS->>Duck: 2. 存入 Parquet
+    Cron->>Quant: 3. 触发扫描
+    Quant->>Duck: 4. 读取 30天数据
+    Quant->>Quant: 5. 计算因子
+    Quant->>AI: 6. AI 分析 Top 50
+    AI-->>Quant: 7. 返回 Top 5
+    Quant->>DB: 8. 保存明日池
+```
+
+### 2.2 点火策略工作流 (Ignition Workflow)
+
+```mermaid
+sequenceDiagram
+    participant User as 前端
+    participant RT as Realtime Engine
+    participant Risk as Risk Manager
+    participant Ak as AkShare
+
+    loop Every 3 Seconds
+        RT->>Ak: 1. 获取快照
+        RT->>RT: 2. 匹配信号
+        opt 触发信号
+            RT->>Risk: 3. 风控检查
+            alt Pass
+                RT->>User: 4. 推送信号
+            else Reject
+                RT->>User: 4. 推送拦截
+            end
+        end
+    end
+```
+
+---
+
+## 3. 核心改进 (From Expert Review)
+
+### P0: 数据一致性
+*   **断点续传**: 记录 `checkpoint`，自动补录。
+*   **完整性校验**: 每日必须满 240 根 K 线。
+*   **备份策略**: 每日备份 Parquet 到 `backup/`。
+
+### P0: 风控规则
+| 规则 | 阈值 | 动作 |
+|------|------|------|
+| 单笔止损 | 亏损 > 3% | 立即平仓 |
+| 单日熔断 | 回撤 > 5% | 停止开仓 |
+| 单票持仓 | > 20% | 禁止加仓 |
+| 同板块 | > 3 只 | 禁止买入 |
+
+### P1: 可观测性
+*   **SLA**: 信号延迟 < 5秒。
+*   **告警**: 延迟超标亮黄灯。
+
+---
+
+## 4. 融合方案：盯盘雷达 + 明日潜力 + AI量化策略
+
+### 4.1 核心融合点
+
+| 现有功能 | AI策略 | 融合方式 |
+|---------|--------|---------|
+| **盯盘雷达** | 点火策略 (Ignition) | 异动检测 → Ignition评分 → 风控 → 推送 |
+| **明日潜力** | 潜伏策略 (Ambush) | 首板 → Ambush因子 → AI分析 → 明日池 |
+
+### 4.2 统一5维评分系统
+
+**评分权重**:
+```
+涨幅异动(40%) + 换手活跃(25%) + 成交规模(20%) + 形态强势(10%) + 量价配合(5%)
+```
+
+**融合架构**:
+```mermaid
+graph TD
+    subgraph 统一评分器 [统一评分器 UnifiedScorer]
+        Score[5维综合评分]
+    end
+    
+    subgraph 盯盘雷达 [盯盘雷达 + 点火策略]
+        Anomaly[异动检测]
+        Ignition[Ignition评分]
+        Risk1[风控检查]
+        Push1[推送信号]
+    end
+    
+    subgraph 明日潜力 [明日潜力 + 潜伏策略]
+        FirstBoard[首板筛选]
+        Ambush[Ambush因子]
+        AI[AI分析]
+        Pool[明日池]
+    end
+    
+    Anomaly --> Ignition
+    Ignition --> Score
+    Score --> Risk1
+    Risk1 --> Push1
+    
+    FirstBoard --> Ambush
+    Ambush --> Score
+    Score --> AI
+    AI --> Pool
+```
+
+### 4.3 融合数据流
+
+#### 4.3.1 盯盘雷达融合流程
+
+```mermaid
+sequenceDiagram
+    participant Ak as AkShare
+    participant Detector as 异动检测
+    participant Ignition as Ignition策略
+    participant Scorer as 统一评分器
+    participant Risk as 风控系统
+    participant User as 前端
+    
+    loop Every 3 Seconds
+        Ak->>Detector: 1. 获取实时快照
+        Detector->>Detector: 2. 异动检测
+        Detector->>Ignition: 3. 转换为分钟线数据
+        Ignition->>Ignition: 4. 计算点火因子
+        Ignition->>Scorer: 5. 获取5维评分
+        Scorer->>Risk: 6. 风控检查
+        alt 通过风控
+            Risk->>User: 7. 推送信号
+        else 拦截
+            Risk->>User: 7. 推送拦截原因
+        end
+    end
+```
+
+#### 4.3.2 明日潜力融合流程
+
+```mermaid
+sequenceDiagram
+    participant Ak as AkShare
+    participant Filter as 首板筛选
+    participant Ambush as Ambush策略
+    participant Duck as DuckDB
+    participant Scorer as 统一评分器
+    participant AI as DeepSeek AI
+    participant DB as SQLite
+    
+    Ak->>Filter: 1. 获取涨停池
+    Filter->>Filter: 2. 筛选首板（排除一字板）
+    Filter->>Ambush: 3. 转换为日线数据
+    Ambush->>Duck: 4. 读取30天历史
+    Ambush->>Ambush: 5. 计算潜伏因子
+    Ambush->>Scorer: 6. 获取5维评分
+    Scorer->>AI: 7. AI分析Top 50
+    AI-->>Scorer: 8. 返回Top 5
+    Scorer->>DB: 9. 保存明日池
+```
+
+---
+
+## 5. 实施路线图
+
+### Phase 1: 统一评分系统 (Week 1-2) - P0
+
+**目标**: 建立统一的5维评分系统，消除评分不一致问题
+
+**任务清单**:
+- [ ] 创建 `UnifiedScorer` 服务
+  - [ ] 实现5维评分算法（涨幅异动40% + 换手活跃25% + 成交规模20% + 形态强势10% + 量价配合5%）
+  - [ ] 适配不同数据源（日线/分钟线）
+  - [ ] 提供统一API接口 (`/api/scoring/unified`)
+- [ ] 前端集成统一评分
+  - [ ] 替换现有4维评分系统
+  - [ ] 更新UI显示逻辑
+  - [ ] 显示各维度得分详情
+- [ ] 后端集成统一评分
+  - [ ] 强势票捕捉策略使用统一评分
+  - [ ] 涨停预测策略使用统一评分
+  - [ ] 保持向后兼容
+
+**验收标准**:
+- ✅ 所有评分使用统一5维标准
+- ✅ 评分结果一致性验证通过（不同模块评分差异<5%）
+- ✅ 前端显示统一评分，包含各维度得分
+
+### Phase 2: 策略连通 (Week 3-4) - P1
+
+**目标**: 实现AI策略与现有功能的融合
+
+#### 2.1 盯盘雷达 + Ignition策略
+
+**任务清单**:
+- [ ] 实现异动检测 → Ignition适配器
+  - [ ] 创建 `IgnitionAdapter` 类
+  - [ ] 实现数据格式转换（异动数据 → 分钟线DataFrame）
+- [ ] 集成分钟线数据源
+  - [ ] 接入Tushare Pro分钟线API
+  - [ ] 实现数据缓存机制
+  - [ ] 实现数据质量检查
+- [ ] 实现实时引擎调用Ignition策略
+  - [ ] 在 `RealtimeEngine` 中集成Ignition策略
+  - [ ] 实现策略评分结果合并
+- [ ] 集成风控检查
+  - [ ] 在信号推送前调用 `RiskManager.check_buy_signal()`
+  - [ ] 记录风控拦截日志
+
+**验收标准**:
+- ✅ 盯盘雷达能调用Ignition策略评分
+- ✅ 信号延迟 < 5秒
+- ✅ 风控规则在融合流程中生效
+
+#### 2.2 明日潜力 + Ambush策略
+
+**任务清单**:
+- [ ] 实现首板数据 → Ambush适配器
+  - [ ] 创建 `AmbushAdapter` 类
+  - [ ] 实现数据格式转换（首板数据 → 日线DataFrame）
+- [ ] 集成DuckDB数据层
+  - [ ] 实现30天历史数据查询
+  - [ ] 实现数据完整性校验
+  - [ ] 实现断点续传机制
+- [ ] 实现Ambush因子计算
+  - [ ] 集成Ambush策略到明日潜力流程
+  - [ ] 计算潜伏因子（volume_ratio, bb_width, obv_divergence等）
+- [ ] 集成AI分析服务
+  - [ ] 接入DeepSeek Agent API
+  - [ ] 实现Top 50 → Top 5筛选
+  - [ ] 实现分析结果缓存
+
+**验收标准**:
+- ✅ 明日潜力能调用Ambush策略分析
+- ✅ AI分析结果准确率 > 70%
+- ✅ 明日池数据保存到SQLite
+
+### Phase 3: 基础设施完善 (Week 5-6) - P0
+
+**目标**: 完善数据一致性和风控系统
+
+**任务清单**:
+- [ ] 搭建 DuckDB + 校验器 + 断点续传
+  - [ ] 实现数据完整性校验（每日240根K线）
+  - [ ] 实现断点续传机制（记录checkpoint）
+  - [ ] 实现每日备份策略（Parquet到backup/）
+- [ ] 实现风控规则表
+  - [ ] 配置单笔止损（3%）
+  - [ ] 配置单日熔断（5%）
+  - [ ] 配置单票持仓限制（20%）
+  - [ ] 配置同板块限制（3只）
+
+**验收标准**:
+- ✅ 数据完整性 > 95%
+- ✅ 断点续传功能正常
+- ✅ 风控规则表配置完成
+
+### Phase 4: AI复核 + 可观测性 (Week 7+) - P2
+
+**目标**: 完善AI分析和系统监控
+
+**任务清单**:
+- [ ] AI分析服务完善
+  - [ ] DeepSeek Agent接口优化
+  - [ ] 分析结果缓存机制
+  - [ ] 分析结果展示优化
+- [ ] 风控系统完善
+  - [ ] 实时风控监控
+  - [ ] 风控日志审计
+  - [ ] 风控告警机制
+- [ ] 可观测性
+  - [ ] 信号延迟监控（SLA < 5秒）
+  - [ ] 策略性能统计
+  - [ ] 用户行为分析
+  - [ ] 告警系统（延迟超标亮黄灯）
+
+**验收标准**:
+- ✅ AI分析结果准确率 > 70%
+- ✅ 风控拦截率统计正常
+- ✅ 信号延迟 < 5秒SLA达标
+- ✅ 监控面板数据实时更新
+
+---
+
+## 6. 关键设计决策
+
+### 6.1 评分系统统一 ✅
+
+**决策**: 采用5维评分系统作为统一标准
+
+**实施位置**: `services/signal-api/signal_api/core/scoring/unified_scorer.py`
+
+### 6.2 数据流设计 ✅
+
+**决策**: 采用适配器模式连接现有功能与AI策略
+
+**实施位置**:
+- `services/signal-api/signal_api/core/quant/adapters/ignition_adapter.py`
+- `services/signal-api/signal_api/core/quant/adapters/ambush_adapter.py`
+
+### 6.3 风控集成点 ✅
+
+**决策**: 在策略评分后、信号推送前进行风控检查
+
+**实施位置**: `services/signal-api/signal_api/core/quant/engines/realtime.py`
+
+---
+
+## 7. 风险与缓解措施
+
+| 风险点 | 影响 | 缓解措施 |
+|--------|------|---------|
+| **分钟线数据延迟** | Ignition策略误判 | 实现数据质量检查，延迟>5秒告警 |
+| **日线数据缺失** | Ambush策略无法计算 | 实现断点续传，自动补录 |
+| **评分系统冲突** | 用户困惑 | 统一使用5维评分系统 |
+| **风控集成遗漏** | 风险暴露 | 在融合流程中强制风控检查 |
+
+---
+
+**详细审查报告**: 参见 `docs/FUSION_PLAN_REVIEW.md`
