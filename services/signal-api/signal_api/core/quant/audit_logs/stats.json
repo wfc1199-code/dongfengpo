@@ -1,0 +1,12 @@
+{
+  "2025-12-17": {
+    "date": "2025-12-17",
+    "total_signals": 10,
+    "passed_signals": 5,
+    "ai_reviewed": 3,
+    "ai_approved": 2,
+    "actual_winners": 0,
+    "actual_losers": 0,
+    "win_rate": 0.0
+  }
+}
