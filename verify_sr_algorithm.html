@@ -1,206 +1,257 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TDX 支撑压力算法验证</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .controls { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
-        button { padding: 8px 16px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 4px; }
-        button:hover { background: #f0f0f0; }
-        button.primary { background: #1890ff; color: white; border: none; }
-        button.primary:hover { background: #40a9ff; }
-        #chart { width: 100%; height: 600px; border: 1px solid #eee; }
-        .log-panel { margin-top: 20px; padding: 10px; background: #1e1e1e; color: #0f0; font-family: monospace; height: 150px; overflow-y: auto; border-radius: 4px; }
+      body {
+        font-family: sans-serif;
+        padding: 20px;
+        background: #f0f2f5;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .controls {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      button {
+        padding: 8px 16px;
+        cursor: pointer;
+        border: 1px solid #ccc;
+        background: #fff;
+        border-radius: 4px;
+      }
+      button:hover {
+        background: #f0f0f0;
+      }
+      button.primary {
+        background: #1890ff;
+        color: white;
+        border: none;
+      }
+      button.primary:hover {
+        background: #40a9ff;
+      }
+      #chart {
+        width: 100%;
+        height: 600px;
+        border: 1px solid #eee;
+      }
+      .log-panel {
+        margin-top: 20px;
+        padding: 10px;
+        background: #1e1e1e;
+        color: #0f0;
+        font-family: monospace;
+        height: 150px;
+        overflow-y: auto;
+        border-radius: 4px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <h1>TDX 支撑压力算法验证工作台</h1>
+      <h1>TDX 支撑压力算法验证工作台</h1>
 
-        <div class="controls">
-            <button onclick="generateData('range')">生成震荡形态 (Box)</button>
-            <button onclick="generateData('uptrend')">生成上升趋势</button>
-            <button onclick="generateData('m_pattern')">生成 M 头形态</button>
-            <div style="width: 20px;"></div>
-            <button class="primary" onclick="calculateSR()">🚀 计算支撑压力</button>
-            <button onclick="clearLines()">清除线条</button>
-        </div>
+      <div class="controls">
+        <button onclick="generateData('range')">生成震荡形态 (Box)</button>
+        <button onclick="generateData('uptrend')">生成上升趋势</button>
+        <button onclick="generateData('m_pattern')">生成 M 头形态</button>
+        <div style="width: 20px"></div>
+        <button class="primary" onclick="calculateSR()">🚀 计算支撑压力</button>
+        <button onclick="clearLines()">清除线条</button>
+      </div>
 
-        <div id="chart"></div>
-        <div id="logs" class="log-panel">系统准备就绪...</div>
+      <div id="chart"></div>
+      <div id="logs" class="log-panel">系统准备就绪...</div>
     </div>
 
     <script>
-        let chart = echarts.init(document.getElementById('chart'));
-        let currentData = null;
+      let chart = echarts.init(document.getElementById("chart"));
+      let currentData = null;
 
-        // 初始化图表
-        function initChart(data) {
-            const option = {
-                tooltip: {
-                    trigger: 'axis',
-                    axisPointer: { type: 'cross' }
-                },
-                grid: { left: '3%', right: '10%', bottom: '15%' },
-                xAxis: {
-                    type: 'category',
-                    data: data.dates,
-                    scale: true,
-                    boundaryGap: false,
-                    axisLine: { onZero: false },
-                    splitLine: { show: false },
-                    min: 'dataMin',
-                    max: 'dataMax'
-                },
-                yAxis: {
-                    scale: true,
-                    splitArea: { show: true }
-                },
-                dataZoom: [
-                    { type: 'inside', start: 0, end: 100 },
-                    { show: true, type: 'slider', top: '90%' }
-                ],
-                series: [
-                    {
-                        name: 'K线',
-                        type: 'candlestick',
-                        data: data.values,
-                        itemStyle: {
-                            color: '#ef4444',
-                            color0: '#10b981',
-                            borderColor: '#ef4444',
-                            borderColor0: '#10b981'
-                        }
-                    }
-                ]
-            };
-            chart.setOption(option);
-            currentData = data;
-            log(`已生成 ${data.values.length} 根K线数据`);
+      // 初始化图表
+      function initChart(data) {
+        const option = {
+          tooltip: {
+            trigger: "axis",
+            axisPointer: { type: "cross" },
+          },
+          grid: { left: "3%", right: "10%", bottom: "15%" },
+          xAxis: {
+            type: "category",
+            data: data.dates,
+            scale: true,
+            boundaryGap: false,
+            axisLine: { onZero: false },
+            splitLine: { show: false },
+            min: "dataMin",
+            max: "dataMax",
+          },
+          yAxis: {
+            scale: true,
+            splitArea: { show: true },
+          },
+          dataZoom: [
+            { type: "inside", start: 0, end: 100 },
+            { show: true, type: "slider", top: "90%" },
+          ],
+          series: [
+            {
+              name: "K线",
+              type: "candlestick",
+              data: data.values,
+              itemStyle: {
+                color: "#ef4444",
+                color0: "#10b981",
+                borderColor: "#ef4444",
+                borderColor0: "#10b981",
+              },
+            },
+          ],
+        };
+        chart.setOption(option);
+        currentData = data;
+        log(`已生成 ${data.values.length} 根K线数据`);
+      }
+
+      // 生成模拟数据
+      function generateData(type) {
+        let basePrice = 100;
+        let prices = [];
+        let dates = [];
+        let volatility = 2;
+
+        for (let i = 0; i < 100; i++) {
+          let change = (Math.random() - 0.5) * volatility;
+
+          if (type === "uptrend") change += 0.5;
+          if (type === "range") {
+            // 强行拉回 100
+            if (basePrice > 110) change -= 1;
+            if (basePrice < 90) change += 1;
+          }
+          if (type === "m_pattern") {
+            // 0-30 上涨, 30-50 下跌, 50-70 上涨, 70-100 下跌
+            if (i < 30) change += 0.8;
+            else if (i < 50) change -= 0.8;
+            else if (i < 70) change += 0.8;
+            else change -= 0.8;
+          }
+
+          basePrice += change;
+
+          let open = basePrice + (Math.random() - 0.5);
+          let close = basePrice + (Math.random() - 0.5);
+          let high = Math.max(open, close) + Math.random();
+          let low = Math.min(open, close) - Math.random();
+
+          prices.push([open, close, low, high]);
+          dates.push(i);
         }
 
-        // 生成模拟数据
-        function generateData(type) {
-            let basePrice = 100;
-            let prices = [];
-            let dates = [];
-            let volatility = 2;
+        initChart({ dates, values: prices });
+        clearLines();
+      }
 
-            for (let i = 0; i < 100; i++) {
-                let change = (Math.random() - 0.5) * volatility;
+      // 调用 API 计算
+      async function calculateSR() {
+        if (!currentData) return alert("请先生成数据");
 
-                if (type === 'uptrend') change += 0.5;
-                if (type === 'range') {
-                    // 强行拉回 100
-                    if (basePrice > 110) change -= 1;
-                    if (basePrice < 90) change += 1;
-                }
-                if (type === 'm_pattern') {
-                    // 0-30 上涨, 30-50 下跌, 50-70 上涨, 70-100 下跌
-                    if (i < 30) change += 0.8;
-                    else if (i < 50) change -= 0.8;
-                    else if (i < 70) change += 0.8;
-                    else change -= 0.8;
-                }
+        log(
+          "正在请求 API: http://localhost:9001/api/support-resistance/tdx/calculate ..."
+        );
 
-                basePrice += change;
+        // 构造 Payload
+        const payload = {
+          symbol: "TEST",
+          prices: currentData.values.map((k) => k[1]), // close
+          highs: currentData.values.map((k) => k[3]),
+          lows: currentData.values.map((k) => k[2]),
+          volumes: currentData.values.map(() => 1000 + Math.random() * 1000), // Mock volume
+          prev_close: currentData.values[0][1] * 0.98,
+          today_open: currentData.values[currentData.values.length - 1][0],
+        };
 
-                let open = basePrice + (Math.random() - 0.5);
-                let close = basePrice + (Math.random() - 0.5);
-                let high = Math.max(open, close) + Math.random();
-                let low = Math.min(open, close) - Math.random();
-
-                prices.push([open, close, low, high]);
-                dates.push(i);
+        try {
+          const res = await fetch(
+            "http://localhost:9001/api/support-resistance/tdx/calculate",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
             }
+          );
 
-            initChart({ dates, values: prices });
-            clearLines();
+          const data = await res.json();
+
+          if (data.success) {
+            log(`计算成功! 发现 ${data.levels.length} 条线`);
+            log(`分析: ${data.analysis.summary}`);
+            drawLevels(data.levels);
+          } else {
+            log("计算失败: " + JSON.stringify(data));
+          }
+        } catch (e) {
+          log("请求错误 (确保后台服务已启动): " + e.message);
         }
+      }
 
-        // 调用 API 计算
-        async function calculateSR() {
-            if (!currentData) return alert('请先生成数据');
+      function drawLevels(levels) {
+        const markLines = levels.map((level) => ({
+          yAxis: level.price,
+          label: {
+            formatter: `${level.type === "resistance" ? "压力" : "支撑"} ${
+              level.price
+            }\nS:${level.strength}`,
+            position: "end",
+            color: level.visual_style.color,
+          },
+          lineStyle: {
+            color: level.visual_style.color,
+            type: level.visual_style.lineStyle || "solid",
+            width: level.visual_style.lineWidth || 1,
+            opacity: level.visual_style.opacity || 0.8,
+          },
+        }));
 
-            log('正在请求 API: http://localhost:9001/support-resistance/tdx/calculate ...');
+        chart.setOption({
+          series: [
+            {
+              markLine: {
+                symbol: ["none", "none"],
+                data: markLines,
+                animation: false,
+              },
+            },
+          ],
+        });
+      }
 
-            // 构造 Payload
-            const payload = {
-                symbol: "TEST",
-                prices: currentData.values.map(k => k[1]), // close
-                highs: currentData.values.map(k => k[3]),
-                lows: currentData.values.map(k => k[2]),
-                volumes: currentData.values.map(() => 1000 + Math.random() * 1000), // Mock volume
-                prev_close: currentData.values[0][1] * 0.98,
-                today_open: currentData.values[currentData.values.length-1][0]
-            };
+      function clearLines() {
+        chart.setOption({ series: [{ markLine: { data: [] } }] });
+        log("线条已清除");
+      }
 
-            try {
-                const res = await fetch('http://localhost:9001/support-resistance/tdx/calculate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+      function log(msg) {
+        const el = document.getElementById("logs");
+        el.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+        el.scrollTop = el.scrollHeight;
+      }
 
-                const data = await res.json();
-
-                if (data.success) {
-                    log(`计算成功! 发现 ${data.levels.length} 条线`);
-                    log(`分析: ${data.analysis.summary}`);
-                    drawLevels(data.levels);
-                } else {
-                    log('计算失败: ' + JSON.stringify(data));
-                }
-
-            } catch (e) {
-                log('请求错误 (确保后台服务已启动): ' + e.message);
-            }
-        }
-
-        function drawLevels(levels) {
-            const markLines = levels.map(level => ({
-                yAxis: level.price,
-                label: {
-                    formatter: `${level.type === 'resistance' ? '压力' : '支撑'} ${level.price}\nS:${level.strength}`,
-                    position: 'end',
-                    color: level.visual_style.color
-                },
-                lineStyle: {
-                    color: level.visual_style.color,
-                    type: level.visual_style.lineStyle || 'solid',
-                    width: level.visual_style.lineWidth || 1,
-                    opacity: level.visual_style.opacity || 0.8
-                }
-            }));
-
-            chart.setOption({
-                series: [{
-                    markLine: {
-                        symbol: ['none', 'none'],
-                        data: markLines,
-                        animation: false
-                    }
-                }]
-            });
-        }
-
-        function clearLines() {
-            chart.setOption({ series: [{ markLine: { data: [] } }] });
-            log('线条已清除');
-        }
-
-        function log(msg) {
-            const el = document.getElementById('logs');
-            el.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-            el.scrollTop = el.scrollHeight;
-        }
-
-        // 默认生成一组数据
-        generateData('range');
+      // 默认生成一组数据
+      generateData("range");
     </script>
-</body>
+  </body>
 </html>

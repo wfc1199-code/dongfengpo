@@ -1,12 +1,16 @@
 """
 涨停板 / 连板追踪 API
 使用 AkShare stock_zt_pool_em API 获取准确的连板数据
+集成统一5维评分系统
 """
 from fastapi import APIRouter
 import asyncio
 import logging
 from typing import Dict, Any
 from datetime import datetime, timedelta
+
+# 导入统一评分器
+from ..core.quant.scorer import get_scorer, StockMetrics
 
 router = APIRouter(
     prefix="/api/limit-up",
@@ -287,6 +291,7 @@ async def get_second_board_candidates(limit: int = 20):
             seal_time = str(row.get('首次封板时间', '09:30') or '09:30')
             burst_count = int(row.get('炸板次数', 0) or 0)
             industry = str(row.get('所属行业', '未知') or '未知')
+            volume_ratio = float(row.get('量比', 1.0) or 1.0)
             
             # 过滤弱势股
             if burst_count > 3:
@@ -296,38 +301,93 @@ async def get_second_board_candidates(limit: int = 20):
             if amount < 100000000:  # 成交额 < 1亿
                 continue
             
-            # 计算晋级概率
-            probability = min(95, int(
-                turnover_rate * 3 + 
-                min(amount / 1e8, 10) * 5 + 
-                change_percent * 2
-            ))
-            
-            candidates.append({
-                'code': code,
-                'name': name,
-                'firstBoardTime': seal_time,
-                'sealAmount': round(amount / 1e8, 2),
-                'probability': probability,
-                'reason': f'首板涨停；换手率{turnover_rate:.1f}%；炸板{burst_count}次',
-                'risks': ['首板股票，关注封板强度'],
-                'theme': industry,
-                'technicalScore': min(100, int(turnover_rate * 5)),
-                'marketScore': probability,
-                'fundScore': min(100, int((amount / 1e8) * 10)),
-                'currentPrice': current_price,
-                'changePercent': change_percent,
-                'turnoverRate': turnover_rate,
-                'burstCount': burst_count
-            })
+            # 使用明日潜力适配器进行评估 (Ambush策略)
+            try:
+                # 延迟导入以避免循环依赖
+                from ..core.quant.adapters import TomorrowCandidateAdapter
+                
+                adapter = TomorrowCandidateAdapter()
+                
+                # 构造适配器需要的输入数据
+                candidate_data = {
+                    'code': code,
+                    'name': name,
+                    'current_price': current_price,
+                    'change_percent': change_percent,
+                    'turnover_rate': turnover_rate,
+                    'amount': amount,
+                    'volume_ratio': volume_ratio,
+                    'industry': industry,
+                    'limit_up_time': seal_time,
+                    'burst_count': burst_count
+                }
+                
+                # 调用适配器 (内部会执行: 5维评分 -> 历史数据获取 -> Ambush策略评估)
+                # 注意: 如果历史数据不足，这里会返回 None (强制要求真实数据)
+                result = await adapter.adapt_tomorrow_candidate(candidate_data)
+                
+                if result is None:
+                    logger.debug(f"Ambush跳过 {code}: 数据不足或不符合条件")
+                    continue
+                
+                # 解包结果
+                (
+                    probability,
+                    unified_score,
+                    strength_level,
+                    risk_level,
+                    reasons,
+                    risks,
+                    ambush_score,
+                    ambush_factors
+                ) = (
+                    result['probability'],
+                    result['unifiedScore'],
+                    result['strengthLevel'],
+                    result['riskLevel'],
+                    result['reasons'],
+                    result['risks'],
+                    result.get('ambushScore', 0),
+                    result.get('ambushFactors', {})
+                )
+                
+                # 构造返回对象
+                candidates.append({
+                    'code': code,
+                    'name': name,
+                    'firstBoardTime': seal_time,
+                    'sealAmount': round(amount / 1e8, 2),
+                    'probability': probability,
+                    'unifiedScore': unified_score,
+                    'strengthLevel': strength_level,
+                    'riskLevel': risk_level,
+                    'ambushScore': ambush_score,      # 新增: 潜伏评分
+                    'ambushFactors': ambush_factors,  # 新增: 潜伏因子
+                    'scoreBreakdown': result.get('scoreBreakdown', {}),
+                    'reason': f'首板潜伏；Ambush评分{ambush_score:.0f}；{ambush_factors.get("trend_intensity", "评级")}',
+                    'reasons': reasons,
+                    'risks': risks,
+                    'theme': industry,
+                    'technicalScore': int(ambush_factors.get('score_vol', 60)),
+                    'marketScore': int(ambush_factors.get('score_trend', 60)),
+                    'fundScore': int(ambush_factors.get('score_basic', 60)),
+                    'currentPrice': current_price,
+                    'changePercent': change_percent,
+                    'turnoverRate': turnover_rate,
+                    'burstCount': burst_count
+                })
+                
+            except Exception as e:
+                logger.error(f"Ambush评估失败 {code}: {e}")
+                continue
             
             if len(candidates) >= limit:
                 break
         
-        # 按概率排序
-        candidates.sort(key=lambda x: x['probability'], reverse=True)
+        # 按Ambush分数和概率排序
+        candidates.sort(key=lambda x: (x.get('ambushScore', 0), x['probability']), reverse=True)
         
-        logger.info(f"✅ 返回 {len(candidates)} 只二板候选")
+        logger.info(f"✅ 返回 {len(candidates)} 只Ambush优选股")
         
         return {
             "code": 200,
@@ -393,18 +453,32 @@ async def get_realtime_predictions(limit: int = 50):
             amount = float(row.get('成交额', 0) or 0)
             seal_time = str(row.get('首次封板时间', '') or '')
             consecutive_days = int(row.get('连板数', 1) or 1)
+            volume_ratio = float(row.get('量比', 1.0) or 1.0)
             
-            # 计算预测分数
-            score = min(100, change_percent * 8 + turnover_rate * 2 + min(amount / 1e7, 10) * 5)
-            
-            if score >= 85:
-                level = "极高"
-            elif score >= 75:
-                level = "高"
-            elif score >= 65:
-                level = "中高"
-            else:
-                level = "中"
+            # 使用统一5维评分系统
+            try:
+                scorer = get_scorer()
+                metrics = StockMetrics(
+                    code=code,
+                    name=name,
+                    price=price,
+                    change_pct=change_percent,
+                    turnover_rate=turnover_rate,
+                    amount=amount,
+                    volume_ratio=volume_ratio,
+                )
+                result = scorer.score(metrics)
+                score = result.total_score
+                level = result.strength_level.value
+                risk = result.risk_level.value
+                reasons = result.reasons
+            except Exception as e:
+                logger.warning(f"评分失败 {code}: {e}")
+                # 回退到简化评分
+                score = min(100, change_percent * 8 + turnover_rate * 2 + min(amount / 1e7, 10) * 5)
+                level = "极高" if score >= 85 else "高" if score >= 75 else "中高" if score >= 65 else "中"
+                risk = "高风险" if change_percent >= 7 else "中等"
+                reasons = [f"涨幅{change_percent:.2f}%"]
             
             stock_data = {
                 "code": code,
@@ -413,15 +487,21 @@ async def get_realtime_predictions(limit: int = 50):
                 "changePercent": change_percent,
                 "turnoverRate": turnover_rate,
                 "amount": amount,
+                "volumeRatio": volume_ratio,
                 "predictionScore": round(score, 1),
                 "predictionLevel": level,
+                "riskLevel": risk,
+                # 新增: 5维评分详情
+                "scoreBreakdown": {
+                    "changeScore": result.change_score if 'result' in locals() else 0,
+                    "turnoverScore": result.turnover_score if 'result' in locals() else 0,
+                    "volumeScore": result.volume_score if 'result' in locals() else 0,
+                    "shapeScore": result.shape_score if 'result' in locals() else 0,
+                    "comboScore": result.combo_score if 'result' in locals() else 0,
+                },
                 "sealTime": seal_time,
                 "consecutive_days": consecutive_days,
-                "predictionReasons": [
-                    f"涨幅{change_percent:.2f}%",
-                    f"换手{turnover_rate:.2f}%",
-                    f"{consecutive_days}连板" if consecutive_days > 1 else "首板"
-                ]
+                "predictionReasons": reasons + ([f"{consecutive_days}连板"] if consecutive_days > 1 else ["首板"])
             }
             
             # 根据封板时间分类
@@ -478,4 +558,139 @@ async def get_realtime_predictions(limit: int = 50):
     except Exception as e:
         logger.error(f"获取实时预测失败: {e}")
         return {"code": 500, "message": str(e), "data": {"segments": []}}
+
+
+@router.get("/anomaly-radar")
+async def get_anomaly_radar(limit: int = 50):
+    """
+    盘中异动雷达 - 全市场扫描
+    
+    扫描全市场股票，检测价格/量比/换手异动，
+    返回涨停前的潜力股票（而非已涨停股票）
+    
+    异动条件:
+    - 涨幅 >= 5% (接近涨停)
+    - 量比 >= 3 (成交放大)
+    - 换手率 >= 3% (活跃交易)
+    """
+    try:
+        from ..core.quant.anomaly_scanner import get_scanner
+        
+        logger.info("🔍 执行全市场异动扫描...")
+        
+        scanner = get_scanner()
+        
+        # 检查是否交易时间
+        if not scanner.is_trading_time():
+            return {
+                "code": 200,
+                "message": "非交易时间",
+                "data": {
+                    "candidates": [],
+                    "is_trading_time": False,
+                    "update_time": datetime.now().isoformat()
+                }
+            }
+        
+        # 执行扫描
+        candidates = await scanner.scan()
+        
+        # 转换为响应格式
+        result_candidates = []
+        for candidate in candidates[:limit]:
+            result_candidates.append({
+                "code": candidate.code,
+                "name": candidate.name,
+                "price": candidate.price,
+                "changePct": candidate.change_pct,
+                "volumeRatio": candidate.volume_ratio,
+                "turnoverRate": candidate.turnover_rate,
+                "amount": candidate.amount,
+                "speed1m": candidate.speed_1m,
+                "speed3m": candidate.speed_3m,
+                "anomalyScore": candidate.anomaly_score,
+                "anomalyTypes": [t.value for t in candidate.anomaly_types],
+                "detectedAt": candidate.detected_at.isoformat(),
+            })
+        
+        logger.info(f"✅ 异动扫描完成: {len(result_candidates)} 只候选")
+        
+        return {
+            "code": 200,
+            "message": "success",
+            "data": {
+                "candidates": result_candidates,
+                "is_trading_time": True,
+                "total_scanned": len(candidates),
+                "update_time": datetime.now().isoformat()
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"异动扫描失败: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"code": 500, "message": str(e), "data": {"candidates": []}}
+
+
+@router.get("/engine-status")
+async def get_engine_status():
+    """
+    获取实时引擎状态
+    """
+    try:
+        from ..core.quant.realtime_engine import get_engine
+        
+        engine = get_engine()
+        return {
+            "code": 200,
+            "message": "success",
+            "data": engine.get_stats()
+        }
+    except Exception as e:
+        return {"code": 500, "message": str(e), "data": {}}
+
+
+@router.post("/start-radar")
+async def start_radar_engine():
+    """
+    启动异动雷达实时引擎
+    
+    启动后每3秒自动扫描一次全市场，发现异动股票后推送
+    """
+    try:
+        from ..core.quant.realtime_engine import get_engine
+        from .quant import get_engine_state, broadcast_signal
+        
+        engine = get_engine(broadcast_callback=broadcast_signal)
+        await engine.start()
+        
+        return {
+            "code": 200,
+            "message": "实时雷达已启动",
+            "data": engine.get_stats()
+        }
+    except Exception as e:
+        logger.error(f"启动实时雷达失败: {e}")
+        return {"code": 500, "message": str(e), "data": {}}
+
+
+@router.post("/stop-radar")
+async def stop_radar_engine():
+    """
+    停止异动雷达实时引擎
+    """
+    try:
+        from ..core.quant.realtime_engine import stop_engine
+        
+        await stop_engine()
+        
+        return {
+            "code": 200,
+            "message": "实时雷达已停止",
+            "data": {}
+        }
+    except Exception as e:
+        logger.error(f"停止实时雷达失败: {e}")
+        return {"code": 500, "message": str(e), "data": {}}
 

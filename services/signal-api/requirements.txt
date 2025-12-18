@@ -5,3 +5,9 @@ redis==5.0.1
 pydantic-settings==2.0.3
 akshare>=1.12.0
 aiohttp>=3.8.0
+# AI Quant Platform dependencies
+tushare>=1.4.0
+duckdb>=0.9.0
+pyarrow>=14.0.0
+httpx>=0.25.0
+apscheduler>=3.10.0

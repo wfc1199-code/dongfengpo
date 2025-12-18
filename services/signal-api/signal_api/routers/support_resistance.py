@@ -3,7 +3,7 @@ from ..core.support_resistance.models import SRRequestPayload, SRResponse
 from ..core.support_resistance.composer import SRComposer
 
 router = APIRouter(
-    prefix="/support-resistance",
+    prefix="/api/support-resistance",
     tags=["support-resistance"]
 )
 

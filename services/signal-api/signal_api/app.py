@@ -29,7 +29,7 @@ def create_app(lifespan=None) -> FastAPI:
     from fastapi.middleware.cors import CORSMiddleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:8080"],
+        allow_origins=["*"],  # Allow all origins for development (including file://)
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -77,11 +77,59 @@ def create_app(lifespan=None) -> FastAPI:
         pass
     
     try:
-        from .routers import options
-        app.include_router(options.router)
+        from .routers import quant
+        app.include_router(quant.router)
     except ImportError:
         pass
+    
 
     return app
-# Module-level app instance for uvicorn
-app = create_app()
+
+
+# ==================== Lifespan Management ====================
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def app_lifespan(app: FastAPI):
+    """
+    Application lifespan manager.
+    Handles startup and shutdown of background services.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Startup
+    logger.info("Application starting up...")
+    
+    # Start scheduler (optional - can be disabled for testing)
+    try:
+        from .core.quant.scheduler import start_scheduler, stop_scheduler
+        start_scheduler()
+        logger.info("Scheduler started successfully")
+    except ImportError as e:
+        logger.warning(f"Scheduler not available: {e}")
+    except Exception as e:
+        logger.error(f"Failed to start scheduler: {e}")
+    
+    yield  # Application runs here
+    
+    # Shutdown
+    logger.info("Application shutting down...")
+    
+    # Stop scheduler
+    try:
+        from .core.quant.scheduler import stop_scheduler
+        stop_scheduler()
+        logger.info("Scheduler stopped successfully")
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.error(f"Failed to stop scheduler: {e}")
+    
+    # Close pipeline client
+    await close_pipeline_client()
+
+
+# Module-level app instance for uvicorn (with lifespan)
+app = create_app(lifespan=app_lifespan)

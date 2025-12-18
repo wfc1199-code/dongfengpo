@@ -66,4 +66,15 @@ yarn-error.log*
 
 # 测试覆盖率
 coverage/
-.nyc_output 
+.nyc_output
+
+# Large Data Directories
+services/signal-api/quant_data/
+
+# IDE and tool configs
+.kiro/
+
+# Backtest results and generated data
+services/signal-api/*_results.json
+services/signal-api/*_params.json
+services/signal-api/valid_stocks.txt

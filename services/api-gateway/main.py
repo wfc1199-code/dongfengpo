@@ -126,7 +126,7 @@ SERVICES = {
             "/api/system/monitoring-stocks",  # 兼容路径（需要重写）
             "/api/anomaly/market-anomaly/scan",  # 市场异动扫描（router prefix是/api/anomaly）
             "/api/market-anomaly/scan",  # 兼容路径
-            "/api/options/search",
+            "/api/market-anomaly/scan",  # 兼容路径
             "/health"  # 健康检查
         ]
     },
